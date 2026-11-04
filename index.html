@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#080a0b" />
+    <meta
+      name="description"
+      content="Dead Streets - a Left 4 Dead-inspired zombie survival FPS. Four survivors, one city block, no rescue coming."
+    />
+    <title>DEAD STREETS — A Zombie Survival FPS</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23080a0b'/%3E%3Cpath d='M12 12h22c13 0 20 8 20 20s-7 20-20 20H12zm13 11v18h9c6 0 9-4 9-9s-3-9-9-9z' fill='%23c63732'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@400;500;600;700;800&family=Special+Elite&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <main id="app">
+      <div id="game-root"></div>
+
+      <div id="hud" class="hud hidden" aria-hidden="true">
+        <div class="hud-vignette"></div>
+        <div class="hud-grain"></div>
+        <div id="damage-flash"></div>
+        <div id="low-health-overlay"></div>
+
+        <section id="squad-panel" class="hud-panel squad-panel">
+          <div class="panel-kicker">SURVIVORS</div>
+          <div id="squad-list"></div>
+        </section>
+
+        <section id="objective-panel" class="objective-panel">
+          <div class="objective-overline">
+            <span class="signal-dot"></span>
+            <span id="objective-stage">SECTOR 01 / THE BLOCK</span>
+          </div>
+          <div id="objective-text">PUSH THROUGH THE STREET</div>
+          <div id="objective-sub">Find a way past the barricade</div>
+        </section>
+
+        <section class="hud-panel stats-panel">
+          <div class="stat-row">
+            <div class="stat">
+              <strong id="stat-kills">0</strong>
+              <span>KILLS</span>
+            </div>
+            <div class="stat">
+              <strong id="stat-specials">0</strong>
+              <span>SPECIALS</span>
+            </div>
+          </div>
+          <div class="threat-block">
+            <div class="threat-copy">
+              <span>DIRECTOR THREAT</span>
+              <strong id="threat-value">CALM</strong>
+            </div>
+            <div class="threat-track"><span id="threat-fill"></span></div>
+          </div>
+        </section>
+
+        <div id="director-timer" class="director-timer hidden">
+          <span id="director-timer-label">OVERRUN IN</span>
+          <strong id="director-timer-value">01:30</strong>
+        </div>
+
+        <section id="health-panel" class="health-panel">
+          <div class="panel-kicker">CONDITION</div>
+          <div class="health-main">
+            <div class="health-cross"><span></span><span></span></div>
+            <div class="health-number-wrap">
+              <strong id="health-value">100</strong>
+              <span>HEALTH</span>
+            </div>
+            <div class="supply-counts">
+              <div class="supply">
+                <span class="supply-key">F</span>
+                <div><strong id="medkit-count">2</strong><small>MEDKIT</small></div>
+              </div>
+              <div class="supply">
+                <span class="supply-key">G</span>
+                <div><strong id="pipe-count">1</strong><small>PIPE BOMB</small></div>
+              </div>
+            </div>
+          </div>
+          <div class="health-track"><span id="health-fill"></span></div>
+          <div id="downed-status" class="downed-status hidden">
+            <span>INCAPACITATED</span>
+            <strong id="bleedout-timer">25</strong>
+          </div>
+        </section>
+
+        <section id="weapon-panel" class="weapon-panel">
+          <div class="weapon-heading">
+            <span id="weapon-name">M16 RIFLE</span>
+            <span id="reload-text" class="hidden">RELOADING</span>
+          </div>
+          <div class="ammo-row">
+            <strong id="ammo-mag">30</strong>
+            <span class="ammo-divider">/</span>
+            <span id="ammo-reserve">120</span>
+          </div>
+          <div class="weapon-footer">
+            <span id="fire-mode">AUTO</span>
+            <span id="weapon-slots">1 / 2 / 3</span>
+          </div>
+          <div class="reload-track"><span id="reload-fill"></span></div>
+        </section>
+
+        <div id="crosshair" class="crosshair">
+          <span class="ch ch-top"></span>
+          <span class="ch ch-right"></span>
+          <span class="ch ch-bottom"></span>
+          <span class="ch ch-left"></span>
+          <span class="ch-dot"></span>
+        </div>
+
+        <div id="hitmarker" class="hitmarker">
+          <span></span><span></span><span></span><span></span>
+        </div>
+
+        <div id="interaction" class="interaction hidden">
+          <div class="interaction-line">
+            <kbd>E</kbd>
+            <span id="interaction-text">TAKE SUPPLIES</span>
+          </div>
+          <div class="hold-track"><span id="hold-fill"></span></div>
+        </div>
+
+        <div id="subtitle-wrap" class="subtitle-wrap hidden">
+          <span id="subtitle-speaker">ROOK</span>
+          <div id="subtitle-text"></div>
+        </div>
+
+        <div id="announcement" class="announcement hidden">
+          <div id="announce-kicker">THE DIRECTOR</div>
+          <div id="announce-title">HORDE</div>
+          <div id="announce-sub">Hold the line.</div>
+        </div>
+
+        <div id="killfeed" class="killfeed"></div>
+
+        <div id="weapon-toast" class="weapon-toast hidden">
+          <span id="weapon-toast-name">M16 RIFLE</span>
+          <small id="weapon-toast-sub">ASSAULT RIFLE</small>
+        </div>
+
+        <div class="controls-strip">
+          <span><kbd>WASD</kbd> MOVE</span>
+          <span><kbd>SHIFT</kbd> SPRINT</span>
+          <span><kbd>RMB</kbd> AIM</span>
+          <span><kbd>Q</kbd> SHOVE</span>
+          <span><kbd>ESC</kbd> PAUSE</span>
+        </div>
+      </div>
+
+      <section id="screen-menu" class="screen menu-screen">
+        <div class="menu-wash"></div>
+        <div class="menu-scanline"></div>
+
+        <header class="menu-top">
+          <div class="studio-mark">
+            <span class="studio-line"></span>
+            <span>RUSTWATER PICTURES</span>
+          </div>
+          <div class="menu-rating">UNRATED / SURVIVAL HORROR</div>
+        </header>
+
+        <div class="title-lockup">
+          <div class="title-kicker">THE CITY IS LOST.</div>
+          <h1 class="game-title">
+            <span class="title-dead">DEAD</span>
+            <span class="title-streets">STREETS</span>
+          </h1>
+          <div class="title-meta">
+            <span>FOUR SURVIVORS</span>
+            <span class="meta-slash">//</span>
+            <span>ONE LAST BLOCK</span>
+            <span class="meta-slash">//</span>
+            <span>NO RESCUE COMING</span>
+          </div>
+        </div>
+
+        <div class="menu-bottom">
+          <div class="deploy-block">
+            <button id="start-button" class="deploy-button" type="button">
+              <span class="deploy-text">ENTER THE STREET</span>
+              <span class="deploy-arrow">&#8594;</span>
+            </button>
+            <p class="deploy-note">Solo campaign with two AI survivors. Mouse + keyboard required.</p>
+            <div class="headphones-note">
+              <span class="headphone-icon"></span>
+              HEADPHONES RECOMMENDED
+            </div>
+          </div>
+
+          <aside class="field-manual">
+            <div class="manual-header">
+              <span>FIELD MANUAL</span>
+              <span>01</span>
+            </div>
+            <div class="manual-grid">
+              <div><kbd>W A S D</kbd><span>MOVE</span></div>
+              <div><kbd>MOUSE</kbd><span>LOOK</span></div>
+              <div><kbd>LMB</kbd><span>FIRE</span></div>
+              <div><kbd>RMB</kbd><span>AIM</span></div>
+              <div><kbd>R</kbd><span>RELOAD</span></div>
+              <div><kbd>Q</kbd><span>SHOVE</span></div>
+              <div><kbd>E</kbd><span>USE / REVIVE</span></div>
+              <div><kbd>F</kbd><span>MEDKIT</span></div>
+            </div>
+            <p class="manual-fineprint">Stay with your team. Listen for specials. Do not get surrounded.</p>
+          </aside>
+        </div>
+
+        <footer class="menu-footer">
+          <span>THERE IS NO CURE.</span>
+          <span class="footer-build">A FAN-MADE BROWSER HOMAGE</span>
+        </footer>
+      </section>
+
+      <section id="screen-pause" class="screen overlay-screen hidden">
+        <div class="overlay-scrim"></div>
+        <div class="pause-card">
+          <div class="pause-kicker">FIELD PAUSED</div>
+          <h2>CATCH YOUR<br />BREATH</h2>
+          <p class="pause-copy">The dead can wait. They are patient.</p>
+          <div class="pause-actions">
+            <button id="resume-button" class="menu-button primary" type="button">RESUME</button>
+            <button id="restart-button" class="menu-button" type="button">RESTART RUN</button>
+            <button id="quit-button" class="menu-button ghost" type="button">ABANDON RUN</button>
+          </div>
+          <label class="sensitivity-row" for="sensitivity">
+            <span>MOUSE SENSITIVITY</span>
+            <input id="sensitivity" type="range" min="0.35" max="2" step="0.05" value="1" />
+            <output id="sensitivity-output">1.00</output>
+          </label>
+          <div class="pause-hint">PRESS ESC TO RESUME</div>
+        </div>
+      </section>
+
+      <section id="screen-end" class="screen overlay-screen hidden">
+        <div class="overlay-scrim"></div>
+        <div class="end-card">
+          <div id="end-kicker" class="end-kicker">THE RUN IS OVER</div>
+          <h2 id="end-title">YOU DIED</h2>
+          <p id="end-copy">The street keeps what it kills.</p>
+          <div class="end-stats">
+            <div><span id="end-kills">0</span><small>KILLS</small></div>
+            <div><span id="end-specials">0</span><small>SPECIALS</small></div>
+            <div><span id="end-time">00:00</span><small>SURVIVED</small></div>
+            <div><span id="end-accuracy">0%</span><small>ACCURACY</small></div>
+          </div>
+          <div class="end-actions">
+            <button id="retry-button" class="menu-button primary" type="button">RUN IT BACK</button>
+            <button id="menu-button" class="menu-button ghost" type="button">MAIN MENU</button>
+          </div>
+          <div class="end-footnote">THE DIRECTOR WILL REMEMBER THAT.</div>
+        </div>
+      </section>
+
+      <div id="boot-screen" class="boot-screen">
+        <div class="boot-inner">
+          <div class="boot-mark"><span></span><span></span></div>
+          <div class="boot-label">PREPARING THE STREET</div>
+          <div class="boot-bar"><span></span></div>
+        </div>
+      </div>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
