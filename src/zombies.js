@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { rand, clamp, damp, choice } from "./utils.js";
+import { rand, clamp, damp, choice, createCanvasTexture } from "./utils.js";
 import { ZOMBIE_TYPES, Zombie } from "./zombie.js";
 
 function buildSharedAssets() {
@@ -42,6 +42,39 @@ function buildSharedAssets() {
     new THREE.MeshStandardMaterial({ color: 0x4a4640, roughness: 1 }),
   ];
 
+  const stainTexture = createCanvasTexture(128, 128, (context, width, height) => {
+    context.clearRect(0, 0, width, height);
+    const gradient = context.createRadialGradient(
+      width / 2,
+      height / 2,
+      2,
+      width / 2,
+      height / 2,
+      width * 0.45
+    );
+    gradient.addColorStop(0, "rgba(66, 3, 3, 0.9)");
+    gradient.addColorStop(0.5, "rgba(48, 2, 2, 0.5)");
+    gradient.addColorStop(1, "rgba(18, 0, 0, 0)");
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, width, height);
+    for (let i = 0; i < 16; i += 1) {
+      const red = Math.floor(rand(35, 90));
+      const alpha = rand(0.14, 0.5);
+      context.fillStyle = "rgba(" + red + ", 2, 2, " + alpha + ")";
+      context.beginPath();
+      context.ellipse(
+        rand(10, width - 10),
+        rand(10, height - 10),
+        rand(2, 17),
+        rand(1, 8),
+        rand(0, Math.PI),
+        0,
+        Math.PI * 2
+      );
+      context.fill();
+    }
+  });
+
   const shared = {
     skin,
     runnerSkin,
@@ -51,8 +84,18 @@ function buildSharedAssets() {
     pants,
     hair,
     boots: new THREE.MeshStandardMaterial({ color: 0x121313, roughness: 0.94 }),
-    dimEye: new THREE.MeshBasicMaterial({ color: 0x98907a }),
+    dimEye: new THREE.MeshBasicMaterial({ color: 0xd8d3bd }),
     redEye: new THREE.MeshBasicMaterial({ color: 0xff4d2e, toneMapped: false }),
+    mouth: new THREE.MeshBasicMaterial({ color: 0x260a08 }),
+    stainMaterial: new THREE.MeshBasicMaterial({
+      map: stainTexture,
+      transparent: true,
+      opacity: 0.72,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+    }),
+    stainGeometry: new THREE.PlaneGeometry(0.38, 0.44),
     spitterJaw: new THREE.MeshStandardMaterial({ color: 0x5f744c, roughness: 0.9 }),
     spitterShirt: new THREE.MeshStandardMaterial({ color: 0x596045, roughness: 0.92 }),
     spitterPants: new THREE.MeshStandardMaterial({ color: 0x3a3b2e, roughness: 0.94 }),

@@ -184,6 +184,22 @@ export class Zombie {
       this.hitMeshes.push(eye);
     }
 
+    const mouth = mesh(shared.jawGeometry, shared.mouth, this.headGroup);
+    mouth.scale.set(0.62, 0.3, 0.45);
+    mouth.position.set(0, -0.068, 0.2);
+    mouth.userData.zombie = this;
+    mouth.userData.head = true;
+    this.hitMeshes.push(mouth);
+
+    if (Math.random() < 0.48 && !isSpitter) {
+      const stain = mesh(shared.stainGeometry, shared.stainMaterial, this.bodyGroup);
+      stain.position.set(rand(-0.08, 0.08), 1.18 + rand(-0.1, 0.1), 0.168);
+      stain.rotation.z = rand(-0.6, 0.6);
+      stain.scale.set(rand(0.7, 1.2), rand(0.7, 1.3), 1);
+      stain.userData.zombie = this;
+      this.hitMeshes.push(stain);
+    }
+
     if (Math.random() < 0.45 && !isBrute && !isSpitter) {
       const hair = mesh(shared.hairGeometry, choice(shared.hair), this.headGroup);
       hair.position.set(0, 0.12, -0.02);

@@ -108,7 +108,8 @@ export class Director {
         const extraction = this.game.world.extractionPosition;
         const dx = player.position.x - extraction.x;
         const dz = player.position.z - extraction.z;
-        if (dx * dx + dz * dz < 3.2 * 3.2) {
+        const doorOpen = this.game.world.safehouseDoor?.progress > 0.7;
+        if (doorOpen && dx * dx + dz * dz < 3.2 * 3.2) {
           this.completed = true;
           this.game.endRun(true, "You made it out. This block is behind you.");
         }

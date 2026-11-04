@@ -516,7 +516,7 @@ export class Game {
     if (this.dom.endKicker) {
       this.dom.endKicker.textContent = victory ? "RUN COMPLETE" : "THE RUN IS OVER";
     }
-    if (this.dom.endTitle) this.dom.endTitle.textContent = victory ? "YOU MADE IT" : "YOU DIED";
+    if (this.dom.endTitle) this.dom.endTitle.textContent = victory ? "EXTRACTED" : "YOU DIED";
     if (this.dom.endCopy) {
       this.dom.endCopy.textContent =
         reason ??

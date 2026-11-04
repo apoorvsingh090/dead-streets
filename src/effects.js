@@ -346,6 +346,11 @@ export class Effects {
       const flash = this.flashes[i];
       flash.life -= dt;
       flash.light.intensity = Math.max(0, flash.light.intensity - dt * flash.decay);
+      if (flash.effect === "shockwave" && flash.mesh) {
+        const progress = 1 - flash.life / flash.maxLife;
+        flash.mesh.scale.setScalar(1 + progress * 8.5);
+        flash.mesh.material.opacity = flash.baseOpacity * (1 - progress);
+      }
       if (flash.life <= 0) {
         this.scene.remove(flash.light);
         if (flash.mesh) {
@@ -538,12 +543,16 @@ export class Effects {
     shockwave.rotation.x = -Math.PI / 2;
     shockwave.position.copy(position);
     shockwave.position.y = 0.06;
+    shockwave.userData.effect = "shockwave";
     this.scene.add(shockwave);
     this.flashes.push({
       light: new THREE.PointLight(0x000000, 0, 1),
       life: 0.42,
+      maxLife: 0.42,
       decay: 0,
       mesh: shockwave,
+      effect: "shockwave",
+      baseOpacity: 0.65,
     });
   }
 
