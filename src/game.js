@@ -96,7 +96,9 @@ export class Game {
       setTimeout(() => this.dom.boot?.remove(), 600);
     });
 
-    window.__deadStreets = this;
+    if (import.meta.env?.DEV) {
+      window.__deadStreets = this;
+    }
   }
 
   createEmptyStats() {
@@ -684,18 +686,22 @@ export class Game {
 
   getSurvivorTargets() {
     const botTargets = this.survivors?.getTargets() ?? [];
-    return [
-      {
-        kind: "player",
-        entity: this.player,
-        name: "YOU",
-        position: this.player.position,
-        downed: this.player.downed,
-        alive: true,
-        radius: this.player.radius,
-      },
-      ...botTargets,
-    ];
+    // Allocate the player entry once; recompute fields in place.
+    const p = this._playerTarget ??= {
+      kind: "player",
+      entity: this.player,
+      name: "YOU",
+      position: this.player.position,
+      downed: false,
+      alive: true,
+      radius: this.player.radius,
+    };
+    p.entity = this.player;
+    p.position = this.player.position;
+    p.downed = this.player.downed;
+    p.alive = true;
+    p.radius = this.player.radius;
+    return [p, ...botTargets];
   }
 
   // ---------------------------------------------------------------------

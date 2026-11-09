@@ -312,8 +312,7 @@ class SurvivorBot {
         }
         this.facePosition(player.position, dt, true);
         this.animate(dt, 0);
-        this.root.updateMatrixWorld(true);
-        return;
+            return;
       }
     } else {
       const forwardX = -Math.sin(player.yaw);
@@ -373,7 +372,6 @@ class SurvivorBot {
     this.tryShoot(dt);
     this.animate(dt, moveSpeed);
     this.root.position.copy(this.position);
-    this.root.updateMatrixWorld(true);
   }
 
   updateDowned(dt) {

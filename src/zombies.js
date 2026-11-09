@@ -135,6 +135,17 @@ function buildSharedAssets() {
     sacGeometry: new THREE.SphereGeometry(0.27, 8, 7),
     shoulderGeometry: new THREE.BoxGeometry(0.36, 0.22, 0.42),
     shadowGeometry: new THREE.CircleGeometry(0.52, 16),
+    shadowMaterial: () => {
+      if (!shared.shadowMaterialCache) {
+        shared.shadowMaterialCache = new THREE.MeshBasicMaterial({
+          color: 0x000000,
+          transparent: true,
+          opacity: 0.34,
+          depthWrite: false,
+        });
+      }
+      return shared.shadowMaterialCache;
+    },
   };
 
   return shared;
@@ -170,7 +181,6 @@ export class ZombieManager {
   spawn(type, position, options = {}) {
     if (this.getAliveCount() >= 42) return null;
     const zombie = new Zombie(this, type, position, options);
-    zombie.root.updateMatrixWorld(true);
     this.zombies.push(zombie);
     return zombie;
   }
@@ -270,7 +280,8 @@ export class ZombieManager {
     return { alive, specials };
   }
 
-  getSeparation(zombie) {
+  getSeparation(zombie, out) {
+    const o = out ?? { x: 0, z: 0 };
     let forceX = 0;
     let forceZ = 0;
     for (const other of this.zombies) {
@@ -290,7 +301,9 @@ export class ZombieManager {
       forceX = (forceX / length) * 2.2;
       forceZ = (forceZ / length) * 2.2;
     }
-    return { x: forceX, z: forceZ };
+    o.x = forceX;
+    o.z = forceZ;
+    return o;
   }
 
   attackSurvivor(zombie, target) {

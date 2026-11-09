@@ -278,13 +278,7 @@ export class Zombie {
       this.hitMeshes.push(back);
     }
 
-    const shadowMaterial = new THREE.MeshBasicMaterial({
-      color: 0x000000,
-      transparent: true,
-      opacity: 0.34,
-      depthWrite: false,
-    });
-    const shadow = new THREE.Mesh(shared.shadowGeometry, shadowMaterial);
+    const shadow = new THREE.Mesh(shared.shadowGeometry, shared.shadowMaterial());
     shadow.rotation.x = -Math.PI / 2;
     shadow.position.y = 0.022;
     shadow.scale.set(isBrute ? 1.6 : 1.1, isBrute ? 1.7 : 1.2, 1);
@@ -423,7 +417,8 @@ export class Zombie {
       moveZ = dirZ * desiredSpeed;
     }
 
-    const separation = this.manager.getSeparation(this);
+    // Reuse a scratch object owned by this instance (no allocation per frame).
+    const separation = this.manager.getSeparation(this, this._separationScratch ??= { x: 0, z: 0 });
     moveX += separation.x;
     moveZ += separation.z;
 
@@ -460,7 +455,6 @@ export class Zombie {
 
     this.faceDirection(dirX, dirZ, dt);
     this.animate(dt, desiredSpeed === 0 ? 0 : Math.hypot(this.knockbackX, this.knockbackZ) + Math.abs(desiredSpeed));
-    this.root.updateMatrixWorld(true);
   }
 
   applyKnockback(dt) {

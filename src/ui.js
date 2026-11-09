@@ -217,16 +217,6 @@ export class HUD {
     }
 
     this.ammoRow?.classList.toggle("is-low", ammo.mag <= Math.max(2, Math.floor(weapon.magSize * 0.25)));
-
-    if (this.cache.reloading !== player.reloading) {
-      this.cache.reloading = player.reloading;
-      this.reloadText.classList.toggle("hidden", !player.reloading);
-    }
-
-    const progress = player.reloading
-      ? 1 - player.reloadTimer / Math.max(0.01, player.reloadDuration)
-      : 0;
-    this.reloadFill.style.width = `${clamp(progress, 0, 1) * 100}%`;
   }
 
   updateSquad(game) {
@@ -300,8 +290,15 @@ export class HUD {
   }
 
   setReload(progress, active) {
-    this.reloadFill.style.width = `${clamp(progress, 0, 1) * 100}%`;
-    this.reloadText.classList.toggle("hidden", !active);
+    const clamped = clamp(progress, 0, 1);
+    if (this.cache.reloadPct !== clamped) {
+      this.cache.reloadPct = clamped;
+      this.reloadFill.style.width = `${clamped * 100}%`;
+    }
+    if (this.cache.reloadingText !== active) {
+      this.cache.reloadingText = active;
+      this.reloadText.classList.toggle("hidden", !active);
+    }
   }
 
   setDowned(downed, bleedout = 0) {
