@@ -21,10 +21,11 @@ Click **Enter the Street** to begin. Mouse capture is required for aiming. The g
 - Two AI-controlled survivors, Rook and Mara, who fight, follow, call out threats, and can revive you
 - Common infected plus runners, acid-spitting Spitters, and a heavily armored Brute
 - Assault rifle, pump shotgun, and sidearm with distinct handling, spread, recoil, and reload timings
+- Blender-authored weapon models loaded at runtime from `public/models/` (procedural fallback when unavailable)
 - Melee shove, pipe bombs, explosive barrels, medkits, and supply caches
 - L4D-style HUD with squad health, director threat, hitmarkers, killfeed, damage direction, and finale timer
 - Procedurally built city block, wet streets, neon signs, streetlights, rain, fog, and a fully procedural soundscape
-- No external art or audio assets — the world, weapons, characters, and sounds are generated at runtime
+- The world, characters, and sounds are generated at runtime; the first-person weapons are authored in Blender (see `tools/make_*.py`) and loaded as glTF
 
 ## Controls
 
@@ -58,6 +59,7 @@ Click **Enter the Street** to begin. Mouse capture is required for aiming. The g
 - [Vite](https://vite.dev/) for the dev server and production build
 - Web Audio API for all sound design
 - Canvas-generated textures for signs, facades, blood, fire, and glow effects
+- [Blender](https://www.blender.org/) 5.x for authoring the weapon viewmodel assets (`tools/make_rifle.py`, `tools/make_shotgun.py`, `tools/make_pistol.py`), exported to glTF via `public/models/`
 
 ```bash
 npm run build

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clamp, lerp, damp, rand, createCanvasTexture } from "./utils.js";
 
 export const WEAPONS = {
@@ -215,6 +216,9 @@ function buildRifle(materials, flashTexture) {
   const tape = box(0.12, 0.035, 0.18, materials.tape, 0, 0.02, -0.36);
   group.add(tape);
 
+  group.children.forEach((child) => {
+    child.userData.isGunPart = true;
+  });
   addArm(group, 1, materials.sleeve, materials.glove, {
     anchorZ: -0.02,
     anchorX: -0.055,
@@ -280,6 +284,9 @@ function buildShotgun(materials, flashTexture) {
   group.add(box(0.075, 0.1, 0.08, materials.darkMetal, 0, 0.15, -0.23));
   group.add(box(0.044, 0.075, 0.035, materials.darkMetal, 0, 0.22, -0.22));
 
+  group.children.forEach((child) => {
+    child.userData.isGunPart = true;
+  });
   addArm(group, 1, materials.sleeveAlt, materials.glove, {
     anchorZ: 0.04,
     anchorX: -0.055,
@@ -333,6 +340,9 @@ function buildPistol(materials, flashTexture) {
   const tape = box(0.1, 0.025, 0.14, materials.tape, 0, -0.015, -0.2);
   group.add(tape);
 
+  group.children.forEach((child) => {
+    child.userData.isGunPart = true;
+  });
   const hand = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.14, 0.18), materials.glove);
   hand.position.set(0, -0.17, 0.04);
   hand.rotation.x = 0.04;
@@ -415,6 +425,11 @@ export class WeaponView {
     }
 
     this.currentId = null;
+    this.gunLoader = new GLTFLoader();
+    this.baseUrl = import.meta.env?.BASE_URL ?? "/";
+    for (const id of Object.keys(this.models)) {
+      this.loadGunModel(id);
+    }
     this.kick = 0;
     this.switchOffset = 0;
     this.bobPhase = rand(0, Math.PI * 2);
@@ -428,6 +443,38 @@ export class WeaponView {
     this.sprintOffset = 0;
     this.time = 0;
     this.setWeapon("rifle", true);
+  }
+
+  loadGunModel(id) {
+    const url = `${this.baseUrl}models/${id}.glb`;
+    this.gunLoader.load(
+      url,
+      (gltf) => {
+        this.adoptGunModel(id, gltf.scene);
+      },
+      undefined,
+      () => {
+        // no Blender asset available; keep the procedural gun
+      }
+    );
+  }
+
+  adoptGunModel(id, scene) {
+    const model = this.models[id];
+    if (!model) return;
+    for (const child of [...model.group.children]) {
+      if (child.userData.isGunPart) {
+        model.group.remove(child);
+      }
+    }
+    scene.traverse((child) => {
+      if (child.isMesh) {
+        child.renderOrder = 5;
+        child.frustumCulled = false;
+      }
+    });
+    scene.name = `glb-${id}`;
+    model.group.add(scene);
   }
 
   setWeapon(id, force = false) {
