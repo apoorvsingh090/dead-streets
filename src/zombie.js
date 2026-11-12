@@ -1,5 +1,27 @@
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { clamp, damp, dampAngle, rand, choice } from "./utils.js";
+
+let zombieTemplate = null;
+let zombieClips = null;
+let zombieAssetState = "loading";
+
+const zombieLoader = new GLTFLoader();
+zombieLoader.load(
+  `${import.meta.env?.BASE_URL ?? "/"}models/zombie.glb`,
+  (gltf) => {
+    zombieTemplate = gltf.scene;
+    zombieClips = gltf.animations ?? [];
+    zombieAssetState = "ready";
+  },
+  undefined,
+  () => {
+    zombieAssetState = "failed";
+  }
+);
+
+const LOCOMOTION = { walk: "walk", run: "run", idle: "idle" };
 
 export const ZOMBIE_TYPES = {
   walker: {
@@ -106,12 +128,144 @@ export class Zombie {
     this.buildModel();
     this.root.position.copy(this.position);
     this.root.rotation.y = this.heading;
-    this.root.scale.setScalar(this.scale);
+    if (this.isProceduralModel) {
+      this.root.scale.setScalar(this.scale);
+    }
     manager.scene.add(this.root);
     manager.registerHitMeshes(this);
   }
 
   buildModel() {
+    this.isProceduralModel = true;
+    if (zombieTemplate) {
+      this.buildSkinnedModel();
+    } else {
+      this.buildProceduralModel();
+    }
+  }
+
+  buildSkinnedModel() {
+    const shared = this.manager.shared;
+    const isBrute = this.type === "brute";
+    const isRunner = this.type === "runner";
+    this.isProceduralModel = false;
+
+    this.root = new THREE.Group();
+    this.root.name = `zombie-${this.type}`;
+    this.bodyGroup = new THREE.Group();
+    this.root.add(this.bodyGroup);
+
+    const typeScale =
+      this.type === "brute" ? this.scale * 1.52 : this.type === "runner" ? this.scale * 0.94 : this.scale;
+    this.model = cloneSkinned(zombieTemplate);
+    this.model.scale.setScalar(typeScale);
+    this.bodyGroup.add(this.model);
+
+    const headBone = this.model.getObjectByName("CityDeadOutfit:Head");
+    if (headBone) {
+      const proxy = new THREE.Mesh(
+        new THREE.SphereGeometry(0.17, 8, 6),
+        new THREE.MeshBasicMaterial({ visible: false })
+      );
+      proxy.name = "headshot-proxy";
+      proxy.userData.zombie = this;
+      proxy.userData.head = true;
+      headBone.add(proxy);
+      this.hitMeshes.push(proxy);
+      this.headProxy = proxy;
+    }
+
+    this.model.traverse((child) => {
+      if (child.isMesh && !child.userData.zombie) {
+        child.userData.zombie = this;
+        this.hitMeshes.push(child);
+      }
+    });
+
+    this.mixer = new THREE.AnimationMixer(this.model);
+    this.actions = {};
+    for (const clip of zombieClips ?? []) {
+      this.actions[clip.name] = this.mixer.clipAction(clip);
+    }
+    this.attackAction = null;
+    this.attackLock = 0;
+    this.hitCooldown = 0;
+    this.lastLoco = "idle";
+    this.attackFinishedBound = false;
+    this.deathStarted = false;
+    this.currentLoco = null;
+    this.setLocomotion("idle", true);
+
+    const shadow = new THREE.Mesh(shared.shadowGeometry, shared.shadowMaterial());
+    shadow.rotation.x = -Math.PI / 2;
+    shadow.position.y = 0.022;
+    shadow.scale.set(isBrute ? 1.7 : 1.15, isBrute ? 1.8 : 1.25, 1);
+    shadow.renderOrder = 1;
+    this.root.add(shadow);
+    this.shadow = shadow;
+  }
+
+  setLocomotion(name, force = false) {
+    const next = this.actions?.[name];
+    if (!next) return;
+    this.lastLoco = name;
+    if (this.currentLoco === next && !force) return;
+    if (this.currentLoco) this.currentLoco.fadeOut(0.25);
+    next.reset().fadeIn(0.25).play();
+    this.currentLoco = next;
+  }
+
+  updateSkinned(dt, speed) {
+    this.attackLock = Math.max(0, this.attackLock - dt);
+    this.hitCooldown = Math.max(0, this.hitCooldown - dt);
+    this.mixer.update(dt);
+
+    if (this.attackLock > 0) return;
+
+    const stationary = speed < 0.4;
+    const loco = stationary ? LOCOMOTION.idle : this.type === "runner" ? LOCOMOTION.run : LOCOMOTION.walk;
+    this.setLocomotion(loco);
+    const action = this.actions[loco];
+    if (action && loco !== LOCOMOTION.idle) {
+      const base = this.type === "runner" ? 5.1 : 2.2;
+      action.timeScale = clamp(speed / base, 0.75, 1.65);
+    }
+  }
+
+  playOneShot(name) {
+    const action = this.actions?.[name];
+    if (!action || this.isProceduralModel) return null;
+    if (this.currentLoco) {
+      this.currentLoco.fadeOut(0.12);
+      this.currentLoco = null;
+    }
+    action.reset();
+    action.setLoop(THREE.LoopOnce, 1);
+    action.clampWhenFinished = true;
+    action.fadeIn(0.1);
+    action.play();
+    this.attackLock = Math.max(this.attackLock, Math.min(1.25, action.getClip().duration));
+    if (!this.attackFinishedBound) {
+      this.mixer.addEventListener("finished", (event) => {
+        if (event.action === this.oneShotAction) {
+          this.oneShotAction = null;
+          this.attackLock = 0;
+          this.setLocomotion(this.lastLoco, true);
+        }
+      });
+      this.attackFinishedBound = true;
+    }
+    this.oneShotAction = action;
+    return action;
+  }
+
+  playAttack() {
+    if (this.isProceduralModel || !this.actions) return;
+    const options = this.type === "spitter" ? ["scream"] : ["attack", "attack2", "attack3"];
+    this.playOneShot(options[Math.floor(Math.random() * options.length)]);
+  }
+
+  buildProceduralModel() {
     const shared = this.manager.shared;
     const config = this.config;
     const isSpitter = this.type === "spitter";
@@ -366,7 +520,11 @@ export class Zombie {
 
     if (this.staggerTimer > 0) {
       this.applyKnockback(dt);
-      this.animate(dt, 2);
+      if (this.isProceduralModel) {
+        this.animate(dt, 2);
+      } else {
+        this.updateSkinned(dt, 1.8);
+      }
       this.faceDirection(dirX, dirZ, dt);
       return;
     }
@@ -400,6 +558,7 @@ export class Zombie {
       if (this.attackCooldown <= 0) {
         this.attackCooldown = this.config.attackInterval * rand(0.82, 1.12);
         this.attackAnim = 1;
+        this.playAttack();
         this.manager.attackSurvivor(this, attackableTarget);
       }
     }
@@ -454,7 +613,20 @@ export class Zombie {
     }
 
     this.faceDirection(dirX, dirZ, dt);
-    this.animate(dt, desiredSpeed === 0 ? 0 : Math.hypot(this.knockbackX, this.knockbackZ) + Math.abs(desiredSpeed));
+    const skinnedSpeed = desiredSpeed === 0 ? 0 : Math.hypot(this.knockbackX, this.knockbackZ) + Math.abs(desiredSpeed);
+    if (this.isProceduralModel) {
+      this.animate(dt, skinnedSpeed);
+    } else {
+      this.updateSkinned(dt, skinnedSpeed);
+    }
+  }
+
+  maybeHitClip(headshot) {
+    if (this.isProceduralModel || !this.actions?.hit) return;
+    if (this.hitCooldown > 0 || this.attackLock > 0) return;
+    if (!headshot && Math.random() > 0.4) return;
+    this.playOneShot("hit");
+    this.hitCooldown = 1.0;
   }
 
   applyKnockback(dt) {
@@ -517,6 +689,7 @@ export class Zombie {
     const applied = amount * multiplier;
     this.health -= applied;
     this.flinch = Math.min(1, this.flinch + (headshot ? 0.8 : 0.3));
+    this.maybeHitClip(headshot);
 
     if (options.direction) {
       const force = headshot ? 0.9 : 0.36;
@@ -553,13 +726,43 @@ export class Zombie {
       const local = Math.atan2(direction.x, direction.z) - this.heading;
       this.fallDirection = Math.cos(local) > 0 ? 1 : -1;
     }
+    this.startDeathAnimation();
     this.manager.registerDeath(this);
     this.game.onZombieKilled(this, headshot, killer);
     this.manager.audio.zombieDie(this.manager.panFor(this.position));
   }
 
+  startDeathAnimation() {
+    if (this.isProceduralModel || !this.actions?.die) return;
+    if (this.deathStarted) return;
+    this.deathStarted = true;
+    this.attackLock = 0;
+    this.attackAction = null;
+    this.oneShotAction = null;
+    if (this.currentLoco) {
+      this.currentLoco.stop();
+      this.currentLoco = null;
+    }
+    const death = this.actions.die;
+    death.reset();
+    death.setLoop(THREE.LoopOnce, 1);
+    death.clampWhenFinished = true;
+    death.fadeIn(0.15);
+    death.play();
+  }
+
   updateDeath(dt) {
     this.deathTime += dt;
+    if (!this.isProceduralModel) {
+      this.mixer.update(dt);
+      if (this.deathTime > 6.5) {
+        this.root.position.y -= dt * 0.22;
+      }
+      if (this.deathTime > 10) {
+        this.manager.removeZombie(this);
+      }
+      return;
+    }
     const fallProgress = clamp(this.deathTime / 0.65, 0, 1);
     const eased = 1 - Math.pow(1 - fallProgress, 3);
     this.bodyGroup.rotation.x = eased * 1.45 * this.fallDirection;

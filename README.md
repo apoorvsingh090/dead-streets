@@ -60,6 +60,7 @@ Click **Enter the Street** to begin. Mouse capture is required for aiming. The g
 - Web Audio API for all sound design
 - Canvas-generated textures for signs, facades, blood, fire, and glow effects
 - [Blender](https://www.blender.org/) 5.x for authoring the weapon viewmodel assets (`tools/make_rifle.py`, `tools/make_shotgun.py`, `tools/make_pistol.py`), exported to glTF via `public/models/`
+- The animated zombie uses **"Male City Zombie" by Rikindle3D** (CC0) from OpenGameArt, retargeted onto its Mixamo skeleton with in-place walk/attack/death clips and loaded as `zombie.glb` (`tools/make_zombie.py`)
 
 ```bash
 npm run build
