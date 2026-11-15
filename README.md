@@ -29,7 +29,7 @@ Pick a difficulty (**Civilian / Survivor / Nightmare**), click **Enter the Stree
 - Blender-authored weapon viewmodels loaded at runtime from `public/models/`
 - Melee shove, pipe bombs, explosive barrels, medkits, and supply caches
 - L4D-style HUD with squad health, director threat, hitmarkers, killfeed, damage direction, and finale timer
-- Pause menu with sensitivity, volume, and HIGH/LOW quality settings (all persisted); best-run tracking on the menu and end screen
+- Pause menu with sensitivity, FOV, volume, and HIGH/LOW quality settings (all persisted); best-run tracking on the menu and end screen
 - Procedurally built city block, wet streets, neon signs, streetlights, rain, fog, and a fully procedural soundscape
 - Installable PWA with an offline service worker; portable Windows build via Electron (see below)
 
