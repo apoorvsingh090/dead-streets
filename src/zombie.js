@@ -560,6 +560,7 @@ export class Zombie {
         this.updateSkinned(dt, 1.8);
       }
       this.faceDirection(dirX, dirZ, dt);
+      this.root.position.copy(this.position);
       return;
     }
 
@@ -676,6 +677,8 @@ export class Zombie {
     } else {
       this.updateSkinned(dt, skinnedSpeed);
     }
+    // Keep the visible mesh glued to the logic position every frame.
+    this.root.position.copy(this.position);
   }
 
   maybeHitClip(headshot) {
