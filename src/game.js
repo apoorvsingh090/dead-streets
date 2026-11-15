@@ -359,7 +359,6 @@ export class Game {
           break;
         case "KeyE":
           this.input.interact = false;
-          this.reviveHold = 0;
           break;
         default:
           break;
@@ -710,9 +709,33 @@ export class Game {
 
   updateInteraction(dt) {
     if (this.player.downed) {
-      this.currentInteraction = null;
-      this.reviveHold = 0;
-      this.hud.setInteraction("", false, 0);
+      // Crawling revive: the player can drag to a downed/dead bot and hold E.
+      // This is the escape hatch for a full-team down — revive one bot and it
+      // will come auto-revive the player.
+      const rescue = this.survivors.getNearbyRescuable(this.player.position, 2.25);
+      if (!rescue) {
+        this.currentInteraction = null;
+        this.reviveHold = 0;
+        this.hud.setInteraction("", false, 0);
+        return;
+      }
+      const holdTime = 3.5;
+      if (this.input.interact) {
+        this.reviveHold += dt;
+      } else {
+        this.reviveHold = Math.max(0, this.reviveHold - dt * 1.5);
+      }
+      const label = rescue.alive ? `REVIVE ${rescue.name} (CRAWLING)` : `RECRUIT ${rescue.name} (CRAWLING)`;
+      const progress = clamp(this.reviveHold / holdTime, 0, 1);
+      this.hud.setInteraction(label, true, progress);
+      if (progress >= 1) {
+        this.survivors.revive(rescue);
+        this.reviveHold = 0;
+        this.currentInteraction = null;
+        this.hud.setInteraction("", false, 0);
+      } else {
+        this.currentInteraction = { type: rescue.alive ? "revive" : "recruit", bot: rescue };
+      }
       return;
     }
 
@@ -731,17 +754,22 @@ export class Game {
       return;
     }
 
-    const downedBot = this.survivors.getNearbyDowned(this.player.position, 2.25);
+    const downedBot = this.survivors.getNearbyRescuable(this.player.position, 2.25);
     if (downedBot) {
-      this.currentInteraction = { type: "revive", bot: downedBot };
+      this.currentInteraction = {
+        type: downedBot.alive ? "revive" : "recruit",
+        bot: downedBot,
+      };
+      const holdTime = downedBot.alive ? 2.2 : 3.5;
       if (this.input.interact) {
         this.reviveHold += dt;
       } else {
-        this.reviveHold = Math.max(0, this.reviveHold - dt * 2.5);
+        this.reviveHold = Math.max(0, this.reviveHold - dt * 1.5);
       }
 
-      const progress = clamp(this.reviveHold / 2.2, 0, 1);
-      this.hud.setInteraction(`REVIVE ${downedBot.name}`, true, progress);
+      const progress = clamp(this.reviveHold / holdTime, 0, 1);
+      const label = downedBot.alive ? `REVIVE ${downedBot.name}` : `RECRUIT ${downedBot.name}`;
+      this.hud.setInteraction(label, true, progress);
       if (progress >= 1) {
         this.survivors.revive(downedBot);
         this.reviveHold = 0;

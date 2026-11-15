@@ -844,11 +844,90 @@ export class Survivors {
     return best;
   }
 
+  getNearbyRescuable(position, maxDistance = 2.25) {
+    let best = null;
+    let bestDistance = maxDistance;
+    for (const bot of this.bots) {
+      const recruitable = !bot.alive || bot.downed;
+      if (!recruitable) continue;
+      const distance = Math.hypot(
+        bot.position.x - position.x,
+        bot.position.z - position.z
+      );
+      if (distance < bestDistance) {
+        best = bot;
+        bestDistance = distance;
+      }
+    }
+    return best;
+  }
+
   revive(bot) {
-    if (!bot || !bot.downed) return false;
+    if (!bot) return false;
+    if (!bot.alive) {
+      // Recruit a dead bot back next to the player.
+      this.rejoin(bot, 50);
+      this.game.hud.addKillfeed(`${bot.name} REJOINS`, false);
+      return true;
+    }
+    if (!bot.downed) return false;
     bot.revive(50);
     this.game.hud.addKillfeed(`${bot.name} REVIVED`, false);
     return true;
+  }
+
+  rejoin(bot, health = 50) {
+    if (!bot || bot.alive) return false;
+    const spawn = this.findRejoinSpot();
+    bot.position.set(spawn.x, 0, spawn.z);
+    bot.velocityX = 0;
+    bot.velocityZ = 0;
+    bot.alive = true;
+    bot.downed = false;
+    bot.health = health;
+    bot.bleedout = 0;
+    bot.reviveTimer = 0;
+    bot.reviveCallout = false;
+    bot.deadTime = 0;
+    if (bot.skinned) {
+      bot.skinned.deathPlayed = false;
+      bot.skinned.play("Idle", true);
+    } else {
+      bot.model.bodyGroup.rotation.z = 0;
+      bot.model.bodyGroup.rotation.x = 0;
+      bot.model.bodyGroup.position.y = 0;
+    }
+    bot.model.gun.visible = true;
+    bot.root.position.copy(bot.position);
+    return true;
+  }
+
+  rejoinDead() {
+    let count = 0;
+    for (const bot of this.bots) {
+      if (!bot.alive && this.rejoin(bot, 50)) count += 1;
+    }
+    return count;
+  }
+
+  findRejoinSpot() {
+    const player = this.game.player.position;
+    const candidates = [
+      [0, 2.2],
+      [-1.6, 1.4],
+      [1.6, 1.4],
+      [-2.6, 0.2],
+      [2.6, 0.2],
+      [0, -2.2],
+    ];
+    for (const [ox, oz] of candidates) {
+      const x = player.x + ox;
+      const z = player.z + oz;
+      if (!this.game.world.collidesCircle(x, z, 0.34)) {
+        return { x, z };
+      }
+    }
+    return { x: player.x, z: player.z + 1.2 };
   }
 
   healAll(amount) {

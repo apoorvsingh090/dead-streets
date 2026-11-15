@@ -254,6 +254,14 @@ export class Director {
       this.game.audio.gate();
     }
     this.game.survivors.healAll(18);
+    const rejoined = this.game.survivors.rejoinDead();
+    if (rejoined > 0) {
+      this.game.hud.addKillfeed(
+        rejoined > 1 ? "TEAM REJOINS THE STREET" : "ALLY REJOINS THE STREET",
+        false
+      );
+      this.game.hud.subtitle("ROOK", "Back in the fight. Don't make me do that again.", 3);
+    }
 
     if (wave.id === 1) {
       this.state = "advance2";
