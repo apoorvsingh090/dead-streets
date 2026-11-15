@@ -292,7 +292,33 @@ export class World {
         return new THREE.Vector3(x, 0, fallbackZ);
       }
     }
-    return new THREE.Vector3(playerPosition.x, 0, clamp(playerPosition.z - 8, minZ, maxZ));
+
+    // Last resort: sweep a ring around the player — every candidate is
+    // collider-checked, so a spawn can never be stuck inside geometry.
+    // The player's own position is guaranteed valid (they stand there).
+    for (const ringRadius of [4, 6, 9, 12]) {
+      for (let i = 0; i < 12; i += 1) {
+        const angle = (i / 12) * Math.PI * 2;
+        const x = clamp(
+          playerPosition.x + Math.cos(angle) * ringRadius,
+          this.bounds.minX + radius,
+          this.bounds.maxX - radius
+        );
+        const z = clamp(
+          playerPosition.z + Math.sin(angle) * ringRadius,
+          minZ,
+          maxZ
+        );
+        if (!this.collidesCircle(x, z, radius)) {
+          return new THREE.Vector3(x, 0, z);
+        }
+      }
+    }
+    return new THREE.Vector3(
+      clamp(playerPosition.x, this.bounds.minX + radius, this.bounds.maxX - radius),
+      0,
+      clamp(playerPosition.z, minZ, maxZ)
+    );
   }
 
   getNearbyInteractable(position, maxDistance = 2.8) {

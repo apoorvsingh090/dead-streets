@@ -241,6 +241,7 @@ export class Player {
     const id = index === 1 ? "rifle" : index === 2 ? "shotgun" : index === 3 ? "pistol" : null;
     if (!id || id === this.currentWeaponId) return;
     this.cancelReload();
+    this.triggerDown = false;
     this.currentWeaponId = id;
     this.fireCooldown = 0.26;
     this.view.setWeapon(id);
