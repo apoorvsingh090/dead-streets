@@ -43,7 +43,7 @@ describe("stepRagdollBody", () => {
   });
 
   it("caps concurrent bodies and gibs", () => {
-    expect(RAGDOLL_BODIES).toBe(8);
+    expect(RAGDOLL_BODIES).toBe(14);
     expect(RAGDOLL_GIBS).toBe(12);
   });
 });
