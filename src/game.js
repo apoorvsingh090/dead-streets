@@ -322,7 +322,14 @@ export class Game {
         this.player.setTrigger(true);
       } else if (event.button === 2) {
         this.input.aim = true;
+      } else if (event.button === 1) {
+        event.preventDefault();
+        if (!event.repeat) this.player.throwFrag();
       }
+    });
+
+    this.renderer.domElement.addEventListener("auxclick", (event) => {
+      if (event.button === 1) event.preventDefault();
     });
 
     window.addEventListener("mouseup", (event) => {
@@ -426,6 +433,18 @@ export class Game {
           break;
         case "KeyG":
           if (!event.repeat) this.player.throwPipeBomb();
+          break;
+        case "KeyV":
+          if (!event.repeat) this.player.throwFrag();
+          break;
+        case "KeyT":
+          if (!event.repeat) {
+            this.player.toggleFlashlight();
+            this.hud.addKillfeed(
+              this.player.flashlightOn ? "FLASHLIGHT ON" : "FLASHLIGHT OFF",
+              false
+            );
+          }
           break;
         case "KeyE":
           this.input.interact = true;
@@ -775,6 +794,10 @@ export class Game {
 
   throwPipeBomb(origin, direction) {
     return this.combat.throwPipeBomb(origin, direction);
+  }
+
+  throwFrag(origin, direction) {
+    return this.combat.throwFrag(origin, direction);
   }
 
   onZombieKilled(zombie, headshot = false, killer = null) {

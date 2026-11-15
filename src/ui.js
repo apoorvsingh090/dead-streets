@@ -25,6 +25,7 @@ export class HUD {
     this.healthFill = document.getElementById("health-fill");
     this.medkitCount = document.getElementById("medkit-count");
     this.pipeCount = document.getElementById("pipe-count");
+    this.fragCount = document.getElementById("frag-count");
     this.downedStatus = document.getElementById("downed-status");
     this.bleedoutTimer = document.getElementById("bleedout-timer");
     this.weaponName = document.getElementById("weapon-name");
@@ -177,6 +178,10 @@ export class HUD {
     if (this.cache.pipebombs !== player.pipebombs) {
       this.cache.pipebombs = player.pipebombs;
       if (this.pipeCount) this.pipeCount.textContent = String(player.pipebombs);
+    }
+    if (this.cache.frags !== player.frags) {
+      this.cache.frags = player.frags;
+      if (this.fragCount) this.fragCount.textContent = String(player.frags);
     }
 
     const downed = player.downed;

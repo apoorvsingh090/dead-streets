@@ -38,8 +38,10 @@ export class Player {
     this.bleedout = 0;
     this.medkits = 2;
     this.pipebombs = 1;
+    this.frags = 2;
     this.maxMedkits = 2;
     this.maxPipebombs = 2;
+    this.maxFrags = 3;
 
     this.currentWeaponId = "rifle";
     this.weaponStates = {};
@@ -278,6 +280,19 @@ export class Player {
     const thrown = this.game.throwPipeBomb(origin, direction);
     if (!thrown) return;
     this.pipebombs -= 1;
+    this.view.shove();
+    this.game.audio.shove();
+  }
+
+  throwFrag() {
+    if (this.downed || this.frags <= 0) return;
+    if (this.game.state !== "playing") return;
+    const direction = new THREE.Vector3();
+    this.camera.getWorldDirection(direction);
+    const origin = this.camera.position.clone().addScaledVector(direction, 0.45);
+    const thrown = this.game.throwFrag(origin, direction);
+    if (!thrown) return;
+    this.frags -= 1;
     this.view.shove();
     this.game.audio.shove();
   }
@@ -559,6 +574,7 @@ export class Player {
   useSupplies() {
     this.medkits = Math.min(this.maxMedkits, this.medkits + 1);
     this.pipebombs = Math.min(this.maxPipebombs, this.pipebombs + 1);
+    this.frags = Math.min(this.maxFrags, this.frags + 1);
     this.addAmmo(60);
     this.game.audio.pickup();
   }
@@ -581,6 +597,7 @@ export class Player {
       bleedout: this.bleedout,
       medkits: this.medkits,
       pipebombs: this.pipebombs,
+      frags: this.frags,
       weapon: this.weapon,
       ammo: this.ammo,
       reloading: this.reloading,

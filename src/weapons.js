@@ -440,6 +440,11 @@ export class WeaponView {
     this.adsProgress = 0;
     this.reloadProgress = 0;
     this.reloadActive = false;
+    this.magDropped = false;
+    this.lastReloadP = 0;
+    this.snapT = 0;
+    this.droppedMags = [];
+    this.magGeo = null;
     this.sprintOffset = 0;
     this.time = 0;
     this.setWeapon("rifle", true);
@@ -511,6 +516,45 @@ export class WeaponView {
     this.shoveTimer = 1;
   }
 
+  dropMag(model) {
+    if (!this.magGeo) {
+      this.magGeo = new THREE.BoxGeometry(0.055, 0.13, 0.04);
+    }
+    const material = new THREE.MeshStandardMaterial({
+      color: 0x2c2f31,
+      roughness: 0.6,
+      metalness: 0.4,
+      transparent: true,
+    });
+    const mag = new THREE.Mesh(this.magGeo, material);
+    mag.position.copy(model.group.position).add(new THREE.Vector3(0.02, -0.1, 0.1));
+    mag.rotation.set(0.3, 0, 0.15);
+    mag.renderOrder = 6;
+    mag.frustumCulled = false;
+    this.root.add(mag);
+    this.droppedMags.push({ mesh: mag, vy: -0.15, spin: rand(4, 9), life: 1.6 });
+  }
+
+  updateDroppedMags(dt) {
+    for (let i = this.droppedMags.length - 1; i >= 0; i -= 1) {
+      const mag = this.droppedMags[i];
+      mag.life -= dt;
+      mag.vy = Math.max(-1.2, mag.vy - dt * 3.5);
+      mag.mesh.position.y += mag.vy * dt;
+      mag.mesh.rotation.x += mag.spin * dt;
+      if (mag.mesh.position.y < -0.55) {
+        mag.mesh.position.y = -0.55;
+        mag.spin *= 0.9;
+      }
+      mag.mesh.material.opacity = clamp(mag.life / 0.5, 0, 1);
+      if (mag.life <= 0) {
+        this.root.remove(mag.mesh);
+        mag.mesh.material.dispose();
+        this.droppedMags.splice(i, 1);
+      }
+    }
+  }
+
   getMuzzleWorldPosition(target) {
     const model = this.models[this.currentId];
     if (!model) return target.set(0, 0, 0);
@@ -560,6 +604,21 @@ export class WeaponView {
     const reloadP = reloading ? clamp(reloadProgress, 0, 1) : 0;
     const reloadDip = smoothstep(0, 0.3, reloadP) * (1 - smoothstep(0.62, 1, reloadP));
     const reloadSeat = smoothstep(0.66, 0.84, reloadP) * (1 - smoothstep(0.84, 1, reloadP));
+    if (!reloading) {
+      this.magDropped = false;
+      this.lastReloadP = 0;
+    } else {
+      if (!this.magDropped && reloadP >= 0.35) {
+        this.magDropped = true;
+        this.dropMag(model);
+      }
+      if (this.lastReloadP < 0.85 && reloadP >= 0.85) {
+        this.snapT = 1;
+      }
+      this.lastReloadP = reloadP;
+    }
+    this.snapT = damp(this.snapT ?? 0, 0, 18, dt);
+    this.updateDroppedMags(dt);
     const switchArc = this.switchOffset;
     const shoveArc = Math.sin(clamp(this.shoveTimer, 0, 1) * Math.PI);
 
@@ -575,7 +634,8 @@ export class WeaponView {
       this.kick * 0.028;
     const targetZ =
       lerp(basePos.z, model.adsPos.z, this.adsProgress) +
-      this.kick * 0.07 -
+      this.kick * 0.07 +
+      this.snapT * 0.045 -
       shoveArc * 0.18;
 
     model.group.position.x = damp(model.group.position.x, targetX, 18, dt);

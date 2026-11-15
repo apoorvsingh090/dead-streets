@@ -155,8 +155,68 @@ export function buildBuildings(world) {
         );
       }
 
-      cursor -= frontage + rand(0.6, 2.8);
+      const gap = rand(0.6, 2.8);
+      // Infill wall so gaps between buildings read as alleys, not void.
+      if (gap > 0.9) {
+        const infillHeight = rand(7, 16);
+        const infill = new THREE.Mesh(
+          new THREE.BoxGeometry(4.5, infillHeight, gap + 0.6),
+          world.materials.roof
+        );
+        infill.position.set(
+          side * (STREET_FACE + 2.2),
+          infillHeight / 2,
+          centerZ - frontage / 2 - gap / 2
+        );
+        world.scene.add(infill);
+        world.registerStatic(infill, "concrete");
+      }
+
+      cursor -= frontage + gap;
     }
+  }
+}
+
+// Distant silhouettes so the street never ends in flat fog.
+export function buildSkyline(world) {
+  const materials = [
+    new THREE.MeshBasicMaterial({ color: 0x0d1316 }),
+    new THREE.MeshBasicMaterial({ color: 0x11181c }),
+    new THREE.MeshBasicMaterial({ color: 0x0a0f13 }),
+  ];
+  let seed = 1234567;
+  const srand = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+  const towers = [];
+  for (let i = 0; i < 46; i += 1) {
+    const side = i % 2 === 0 ? -1 : 1;
+    const x = side * (30 + srand() * 34);
+    const z = -130 + srand() * 260;
+    const w = 8 + srand() * 14;
+    const h = 14 + srand() * 42;
+    const d = 8 + srand() * 14;
+    towers.push({ x, z, w, h, d, material: materials[i % materials.length] });
+  }
+  // Cap the ends of the street behind the start and the shelter.
+  for (let i = 0; i < 10; i += 1) {
+    towers.push({
+      x: -40 + i * 9 + srand() * 4,
+      z: i % 2 === 0 ? 122 + srand() * 14 : -128 + srand() * 10,
+      w: 10 + srand() * 10,
+      h: 18 + srand() * 30,
+      d: 10,
+      material: materials[(i + 1) % materials.length],
+    });
+  }
+  for (const tower of towers) {
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(tower.w, tower.h, tower.d),
+      tower.material
+    );
+    mesh.position.set(tower.x, tower.h / 2 - 0.5, tower.z);
+    world.scene.add(mesh);
   }
 }
 

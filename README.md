@@ -51,6 +51,8 @@ Pick a difficulty (**Civilian / Survivor / Nightmare**), click **Enter the Stree
 | `E` | Use supplies, start the generator, hold to revive / recruit |
 | `F` | Use medkit |
 | `G` | Throw pipe bomb |
+| `V` / middle-click | Throw frag grenade |
+| `T` | Toggle flashlight |
 | `M` | Mute audio |
 | `F11` | Toggle fullscreen (desktop app) |
 | `Esc` | Pause |
@@ -67,6 +69,7 @@ Standard layout, connected any time — Start/A also starts a run from the menu.
 | `A` / `B` / `X` / `Y` | Jump / Shove / Reload / Use + revive |
 | `LB` / `RB` | Cycle weapons |
 | `D-down` / `D-right` | Medkit / Pipe bomb |
+| `D-left` / `D-up` | Frag / Flashlight |
 | `Start` / `Back` | Pause / Mute |
 
 ## Run Objectives

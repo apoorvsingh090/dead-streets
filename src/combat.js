@@ -19,6 +19,7 @@ export class CombatSystem {
     this.game = game;
     this.raycaster = new THREE.Raycaster();
     this.pipebombs = [];
+    this.frags = [];
     this.pendingBarrels = [];
     this.sharedBombGeometry = new THREE.CylinderGeometry(0.105, 0.105, 0.48, 10);
     this.sharedBandGeometry = new THREE.CylinderGeometry(0.115, 0.115, 0.05, 10);
@@ -184,13 +185,69 @@ export class CombatSystem {
     return true;
   }
 
+  throwFrag(origin, direction) {
+    if (this.game.state !== "playing") return false;
+    if (!this.sharedFragGeometry) {
+      this.sharedFragGeometry = new THREE.SphereGeometry(0.09, 10, 8);
+      this.sharedFragMaterial = new THREE.MeshStandardMaterial({
+        color: 0x2e3a24,
+        roughness: 0.5,
+        metalness: 0.6,
+      });
+    }
+    const mesh = new THREE.Mesh(this.sharedFragGeometry, this.sharedFragMaterial);
+    mesh.position.copy(origin);
+    mesh.position.y = Math.max(0.35, origin.y - 0.2);
+    this.game.scene.add(mesh);
+
+    const velocity = direction.clone().multiplyScalar(13);
+    velocity.y += 4.4;
+
+    this.frags.push({ mesh, velocity, life: 1.6, active: true });
+    this.game.hud.addKillfeed("FRAG OUT", false);
+    return true;
+  }
+
   update(dt) {
     for (let i = this.pendingBarrels.length - 1; i >= 0; i -= 1) {
-      this.pendingBarrels[i].timer -= dt;
-      if (this.pendingBarrels[i].timer <= 0) {
-        const barrel = this.pendingBarrels[i].barrel;
+      const pending = this.pendingBarrels[i];
+      pending.timer -= dt;
+      if (pending.timer <= 0) {
+        const barrel = pending.barrel;
         this.pendingBarrels.splice(i, 1);
         this.explodeBarrel(barrel);
+      }
+    }
+
+    for (let i = this.frags.length - 1; i >= 0; i -= 1) {
+      const frag = this.frags[i];
+      if (!frag.active) continue;
+      frag.life -= dt;
+      frag.velocity.y -= 15 * dt;
+      const previous = frag.mesh.position.clone();
+      frag.mesh.position.addScaledVector(frag.velocity, dt);
+      if (frag.mesh.position.y < 0.12) {
+        frag.mesh.position.y = 0.12;
+        if (frag.velocity.y < 0) frag.velocity.y *= -0.35;
+        frag.velocity.x *= 0.7;
+        frag.velocity.z *= 0.7;
+      }
+      if (
+        this.game.world.collidesCircle(
+          frag.mesh.position.x,
+          frag.mesh.position.z,
+          0.1
+        )
+      ) {
+        frag.mesh.position.x = previous.x;
+        frag.mesh.position.z = previous.z;
+        frag.velocity.x *= -0.42;
+        frag.velocity.z *= -0.42;
+      }
+      frag.mesh.rotation.x += dt * 7;
+      if (frag.life <= 0) {
+        this.detonateFrag(frag);
+        this.frags.splice(i, 1);
       }
     }
 
@@ -278,12 +335,41 @@ export class CombatSystem {
     }
   }
 
+  detonateFrag(frag) {
+    if (!frag.active) return;
+    frag.active = false;
+    const position = frag.mesh.position.clone();
+    position.y = Math.max(0.04, position.y);
+    this.game.scene.remove(frag.mesh);
+    this.game.effects.explosion(position);
+    this.game.audio.explosion(this.game.zombies.panFor(position));
+    this.game.zombies.damageInRadius(position, 6, 220, this.game.player);
+    this.hurtSurvivorsInRadius(position, 5, 20);
+
+    for (const other of this.game.world.barrels) {
+      if (!other.alive) continue;
+      if (other.position.distanceTo(position) < 8) {
+        this.pendingBarrels.push({ barrel: other, timer: rand(0.08, 0.25) });
+      }
+    }
+
+    const playerDistance = this.game.player.position.distanceTo(position);
+    if (playerDistance < 12) {
+      this.game.player.shake = Math.min(1.5, this.game.player.shake + 0.5);
+      this.game.player.shakeTime = 0.3;
+    }
+  }
+
   clear() {
     for (const bomb of this.pipebombs) {
       this.game.scene.remove(bomb.group);
       bomb.glow.material.dispose();
     }
     this.pipebombs = [];
+    for (const frag of this.frags) {
+      this.game.scene.remove(frag.mesh);
+    }
+    this.frags = [];
     this.pendingBarrels = [];
   }
 }

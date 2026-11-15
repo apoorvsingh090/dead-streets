@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { rand, clamp, damp, choice, createCanvasTexture } from "./utils.js";
 import { ZOMBIE_TYPES, Zombie } from "./zombie.js";
-import { RAGDOLL_BURSTS, stepRagdollChunk } from "./ragdoll.js";
+import { RAGDOLL_BODIES, RAGDOLL_GIBS, stepRagdollBody, stepRagdollChunk } from "./ragdoll.js";
 
 export const MAX_ACID_POOLS = 8;
 
@@ -169,7 +169,7 @@ export class ZombieManager {
     this.distraction = { position: new THREE.Vector3(), timer: 0 };
     this.targetBuffer = [];
     this.ragdolls = [];
-    this.ragdollBursts = 0;
+    this.ragdollBodies = 0;
 
     this.projectileGeometry = new THREE.SphereGeometry(0.16, 8, 6);
     this.projectileMaterial = new THREE.MeshBasicMaterial({ color: 0xb7e65b, toneMapped: false });
@@ -300,58 +300,89 @@ export class ZombieManager {
       ? direction
       : new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
     const heavy = zombie.type === "brute" ? 0.45 : 1;
-    const parts = [
-      { geo: "ball", mat: skinMat, size: [0.17, 0.17, 0.17], at: [0, 1.7, 0.02], pop: headshot ? 2.1 : 1 },
-      { geo: "box", mat: shirtMat, size: [0.55, 0.7, 0.3], at: [0, 1.15, 0], pop: 1 },
-      { geo: "box", mat: shirtMat, size: [0.13, 0.62, 0.13], at: [-0.4, 1.2, 0], pop: 1.25 },
-      { geo: "box", mat: skinMat, size: [0.13, 0.62, 0.13], at: [0.4, 1.2, 0], pop: 1.25 },
-      { geo: "box", mat: pantsMat, size: [0.18, 0.78, 0.2], at: [-0.17, 0.45, 0], pop: 0.9 },
-      { geo: "box", mat: pantsMat, size: [0.18, 0.78, 0.2], at: [0.17, 0.45, 0], pop: 0.9 },
-    ];
-    const heading = zombie.heading;
-    const cosH = Math.cos(heading);
-    const sinH = Math.sin(heading);
-    const burst = [];
-    for (const part of parts) {
-      const mesh = new THREE.Mesh(
-        part.geo === "ball" ? this._ragdollBall : this._ragdollBox,
-        part.mat
-      );
-      // Rotate local offsets by the zombie's facing so chunks start in place.
-      const lx = part.at[0] * s;
-      const lz = part.at[2] * s;
-      mesh.position.set(
-        zombie.position.x + lx * cosH + lz * sinH,
-        Math.max(0.12, part.at[1] * s),
-        zombie.position.z - lx * sinH + lz * cosH
-      );
-      mesh.scale.set(part.size[0] * s, part.size[1] * s, part.size[2] * s);
-      mesh.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+
+    // One rigid corpse: parts stay attached, the whole body tips over
+    // ballistically and settles flat.
+    const group = new THREE.Group();
+    const addPart = (geo, mat, sx, sy, sz, x, y, z) => {
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.scale.set(sx * s, sy * s, sz * s);
+      mesh.position.set(x * s, y * s, z * s);
       mesh.castShadow = false;
       mesh.receiveShadow = false;
-      this.scene.add(mesh);
-      const speed = (2 + Math.random() * 2.8) * part.pop * heavy;
-      burst.push({
-        mesh,
-        vx: dir.x * speed + (Math.random() - 0.5) * 1.6,
-        vy: (2.4 + Math.random() * 3) * part.pop * heavy,
-        vz: dir.z * speed + (Math.random() - 0.5) * 1.6,
-        ax: (Math.random() - 0.5) * 14,
-        ay: (Math.random() - 0.5) * 14,
-        az: (Math.random() - 0.5) * 14,
-        radius: Math.max(part.size[0], part.size[1], part.size[2]) * s * 0.5,
-        life: 7,
+      group.add(mesh);
+    };
+    addPart(this._ragdollBox, shirtMat, 0.55, 0.7, 0.3, 0, 1.05, 0);
+    addPart(this._ragdollBall, skinMat, 0.17, 0.17, 0.17, 0, 1.52, 0.02);
+    addPart(this._ragdollBox, shirtMat, 0.13, 0.6, 0.13, -0.36, 1.0, 0);
+    addPart(this._ragdollBox, skinMat, 0.13, 0.6, 0.13, 0.36, 1.0, 0);
+    addPart(this._ragdollBox, pantsMat, 0.18, 0.75, 0.2, -0.16, 0.4, 0);
+    addPart(this._ragdollBox, pantsMat, 0.18, 0.75, 0.2, 0.16, 0.4, 0);
+    group.position.copy(zombie.position);
+    group.rotation.y = zombie.heading;
+    this.scene.add(group);
+
+    // Fall away from the killing shot.
+    const local = Math.atan2(dir.x, dir.z) - zombie.heading;
+    const backward = Math.cos(local) > 0;
+    const flySpeed = (2 + Math.random() * 2.5) * heavy;
+    this.ragdolls.push({
+      group,
+      vel: {
+        x: dir.x * flySpeed,
+        y: 2.6 + Math.random() * 2.6 * heavy,
+        z: dir.z * flySpeed,
+      },
+      ang: {
+        x: (backward ? -1 : 1) * (3.5 + Math.random() * 3),
+        y: (Math.random() - 0.5) * 2,
+        z: (Math.random() - 0.5) * 2,
+      },
+      lieX: backward ? -Math.PI / 2 : Math.PI / 2,
+      lieZ: 0,
+      restY: 0.2 * s,
+      settled: false,
+      life: 9,
+    });
+    this.ragdollBodies += 1;
+
+    // Headshot pops the head off as its own gib.
+    if (headshot) {
+      const head = new THREE.Mesh(this._ragdollBall, skinMat);
+      head.scale.setScalar(0.17 * s);
+      head.position.set(zombie.position.x, 1.55 * s, zombie.position.z);
+      head.castShadow = false;
+      this.scene.add(head);
+      this.ragdolls.push({
+        gib: true,
+        mesh: head,
+        vx: dir.x * 4 + (Math.random() - 0.5) * 2,
+        vy: 4.5 + Math.random() * 2.5,
+        vz: dir.z * 4 + (Math.random() - 0.5) * 2,
+        ax: (Math.random() - 0.5) * 18,
+        ay: (Math.random() - 0.5) * 18,
+        az: (Math.random() - 0.5) * 18,
+        radius: 0.16 * s,
+        life: 6,
       });
     }
-    this.ragdolls.push(...burst);
-    this.ragdollBursts += 1;
-    // Cap bursts; geometries/materials are shared caches, so just unparent.
-    while (this.ragdollBursts > RAGDOLL_BURSTS) {
-      this.ragdollBursts -= 1;
-      for (let i = 0; i < 6 && this.ragdolls.length > 0; i += 1) {
-        const oldest = this.ragdolls.shift();
-        if (oldest.mesh.parent) this.scene.remove(oldest.mesh);
-      }
+
+    // Cap bodies; geometries/materials are shared caches, so just unparent.
+    // Gibs ride along inside ragdolls and are much shorter-lived.
+    let bodies = this.ragdolls.filter((entry) => !entry.gib).length;
+    while (bodies > RAGDOLL_BODIES) {
+      const index = this.ragdolls.findIndex((entry) => !entry.gib);
+      const [oldest] = this.ragdolls.splice(index, 1);
+      if (oldest.group.parent) this.scene.remove(oldest.group);
+      this.ragdollBodies -= 1;
+      bodies -= 1;
+    }
+    const gibs = this.ragdolls.filter((entry) => entry.gib);
+    while (gibs.length > RAGDOLL_GIBS) {
+      const oldest = gibs.shift();
+      const index = this.ragdolls.indexOf(oldest);
+      if (index >= 0) this.ragdolls.splice(index, 1);
+      if (oldest.mesh.parent) this.scene.remove(oldest.mesh);
     }
     // Blood puff at the torso so the burst reads as an impact, not confetti.
     const center = new THREE.Vector3(zombie.position.x, 1.2 * s, zombie.position.z);
@@ -360,17 +391,19 @@ export class ZombieManager {
 
   updateRagdolls(dt) {
     for (let i = this.ragdolls.length - 1; i >= 0; i -= 1) {
-      const chunk = this.ragdolls[i];
-      chunk.life -= dt;
-      if (chunk.life <= 0) {
-        chunk.mesh.position.y -= dt * 0.5;
-        if (chunk.life < -1.6) {
-          if (chunk.mesh.parent) this.scene.remove(chunk.mesh);
+      const entry = this.ragdolls[i];
+      entry.life -= dt;
+      if (entry.life <= 0) {
+        const anchor = entry.gib ? entry.mesh : entry.group;
+        anchor.position.y -= dt * 0.35;
+        if (entry.life < -1.6) {
+          if (anchor.parent) this.scene.remove(anchor);
           this.ragdolls.splice(i, 1);
         }
         continue;
       }
-      stepRagdollChunk(chunk, dt);
+      if (entry.gib) stepRagdollChunk(entry, dt);
+      else stepRagdollBody(entry, dt);
     }
   }
 

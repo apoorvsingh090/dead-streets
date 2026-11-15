@@ -8,7 +8,7 @@ import {
   makeFireTexture,
   makeSignTexture,
 } from "./world/textures.js";
-import { buildStreet, buildBuildings } from "./world/street.js";
+import { buildStreet, buildBuildings, buildSkyline } from "./world/street.js";
 import { buildFurniture } from "./world/furniture.js";
 import {
   buildGates,
@@ -51,6 +51,7 @@ export class World {
 
     buildStreet(this);
     buildBuildings(this);
+    buildSkyline(this);
     buildFurniture(this);
     buildGates(this);
     buildSafehouses(this);

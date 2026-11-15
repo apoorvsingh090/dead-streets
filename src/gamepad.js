@@ -3,7 +3,8 @@ import { clamp } from "./utils.js";
 // Standard mapping, L4D-style:
 // LS move (full tilt = sprint) | RS look | RT fire | LT ADS
 // A jump | B shove | X reload | Y use/revive | LB/RB weapons
-// D-down medkit | D-right pipe bomb | Start pause | Back mute
+// D-down medkit | D-right pipe bomb | D-left frag | D-up flashlight
+// Start pause | Back mute
 export const BUTTON = {
   A: 0,
   B: 1,
@@ -185,6 +186,11 @@ export class GamepadController {
     if (this.justPressed(BUTTON.RB)) cycleWeapon(game.player, 1);
     if (this.justPressed(BUTTON.D_DOWN)) game.player.useMedkit();
     if (this.justPressed(BUTTON.D_RIGHT)) game.player.throwPipeBomb();
+    if (this.justPressed(BUTTON.D_LEFT)) game.player.throwFrag();
+    if (this.justPressed(BUTTON.D_UP)) {
+      game.player.toggleFlashlight();
+      game.hud.addKillfeed(game.player.flashlightOn ? "FLASHLIGHT ON" : "FLASHLIGHT OFF", false);
+    }
     if (this.justPressed(BUTTON.BACK)) {
       const muted = game.audio.toggleMute();
       game.hud.addKillfeed(muted ? "AUDIO MUTED" : "AUDIO ENABLED", false);
