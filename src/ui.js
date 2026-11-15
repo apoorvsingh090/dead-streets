@@ -55,6 +55,7 @@ export class HUD {
     this.controlsStrip = document.querySelector(".controls-strip");
 
     this.cache = {};
+    this.reduceFlash = false;
     this.subtitleQueue = [];
     this.subtitleActive = false;
     this.subtitleTimer = 0;
@@ -336,12 +337,13 @@ export class HUD {
 
   flashDamage(intensity = 0.5) {
     if (!this.damageFlash) return;
-    if (intensity <= 0) {
+    const scaled = this.reduceFlash ? intensity * 0.25 : intensity;
+    if (scaled <= 0) {
       this.damageFlash.style.opacity = "0";
       return;
     }
     const current = parseFloat(this.damageFlash.style.opacity || "0");
-    const next = clamp(Math.max(current, intensity * 0.82), 0, 0.9);
+    const next = clamp(Math.max(current, scaled * 0.82), 0, this.reduceFlash ? 0.25 : 0.9);
     this.damageFlash.style.transition = "none";
     this.damageFlash.style.opacity = String(next);
     void this.damageFlash.offsetWidth;

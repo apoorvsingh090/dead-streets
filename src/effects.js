@@ -211,6 +211,7 @@ export class Effects {
     this.rain = null;
     this.lightningTimer = rand(16, 32);
     this.lightningFlash = 0;
+    this.reduceFlash = false;
     this.buildDecalPool();
     this.buildRain();
   }
@@ -310,7 +311,7 @@ export class Effects {
     this.lightningTimer -= dt;
     if (this.lightningTimer <= 0) {
       this.lightningTimer = rand(20, 42);
-      this.lightningFlash = 1;
+      this.lightningFlash = this.reduceFlash ? 0.25 : 1;
     }
     if (this.lightningFlash > 0) {
       this.lightningFlash = Math.max(0, this.lightningFlash - dt * 5.5);
@@ -505,7 +506,8 @@ export class Effects {
   }
 
   explosion(position) {
-    const flashLight = new THREE.PointLight(0xff8a36, 160, 26, 3.4);
+    const flashScale = this.reduceFlash ? 0.3 : 1;
+    const flashLight = new THREE.PointLight(0xff8a36, 160 * flashScale, 26, 3.4);
     flashLight.position.copy(position).add(new THREE.Vector3(0, 1.5, 0));
     this.scene.add(flashLight);
     this.flashes.push({ light: flashLight, life: 0.24, decay: 620, mesh: null });

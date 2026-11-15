@@ -31,6 +31,15 @@ export function saveNumber(key, value) {
 export const SENSITIVITY_KEY = "dead-streets:sensitivity";
 export const FOV_KEY = "dead-streets:fov";
 export const QUALITY_KEY = "dead-streets:quality";
+export const REDUCE_FLASH_KEY = "dead-streets:reduce-flash";
+
+export function loadBool(key) {
+  return safeGet(key) === "1";
+}
+
+export function saveBool(key, value) {
+  safeSet(key, value ? "1" : "0");
+}
 
 export function loadQuality() {
   return safeGet(QUALITY_KEY) === "low" ? "low" : "high";

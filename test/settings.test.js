@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isBetterRun, formatBestLine } from "../src/settings.js";
+import { isBetterRun, formatBestLine, loadBool } from "../src/settings.js";
 
 describe("isBetterRun", () => {
   it("prefers wins over losses", () => {
@@ -38,5 +38,11 @@ describe("formatBestLine", () => {
     expect(formatBestLine({ victory: false, kills: 3, time: NaN })).toBe(
       "BEST FELL — 3 KILLS IN 0:00 (SURVIVOR)"
     );
+  });
+});
+
+describe("loadBool", () => {
+  it("defaults to false without storage", () => {
+    expect(loadBool("dead-streets:reduce-flash")).toBe(false);
   });
 });

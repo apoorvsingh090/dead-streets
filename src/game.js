@@ -17,12 +17,15 @@ import {
 } from "./difficulty.js";
 import {
   FOV_KEY,
+  REDUCE_FLASH_KEY,
   SENSITIVITY_KEY,
   considerBest,
   formatBestLine,
   loadBest,
+  loadBool,
   loadNumber,
   loadQuality,
+  saveBool,
   saveNumber,
   saveQuality,
 } from "./settings.js";
@@ -83,6 +86,7 @@ export class Game {
       volume: document.getElementById("volume"),
       volumeOutput: document.getElementById("volume-output"),
       qualityButton: document.getElementById("quality-button"),
+      flashButton: document.getElementById("flash-button"),
       difficultySub: document.getElementById("difficulty-sub"),
       bestLine: document.getElementById("best-line"),
       boot: document.getElementById("boot-screen"),
@@ -155,6 +159,20 @@ export class Game {
     this.quality = this.quality === "low" ? "high" : "low";
     saveQuality(this.quality);
     this.applyQuality();
+  }
+
+  applyReduceFlash(enabled) {
+    this.reduceFlash = enabled;
+    this.hud.reduceFlash = enabled;
+    this.effects.reduceFlash = enabled;
+    saveBool(REDUCE_FLASH_KEY, enabled);
+    if (this.dom.flashButton) {
+      this.dom.flashButton.textContent = enabled ? "ON" : "OFF";
+    }
+  }
+
+  toggleReduceFlash() {
+    this.applyReduceFlash(!this.reduceFlash);
   }
 
   initRenderer() {
@@ -286,6 +304,8 @@ export class Game {
     }
 
     this.dom.qualityButton?.addEventListener("click", () => this.toggleQuality());
+    this.dom.flashButton?.addEventListener("click", () => this.toggleReduceFlash());
+    this.applyReduceFlash(loadBool(REDUCE_FLASH_KEY));
     this.renderBestLine();
 
     this.renderer.domElement.addEventListener("contextmenu", (event) => {
