@@ -66,7 +66,7 @@ export const WEAPONS = {
     recoilYaw: 0.004,
     shake: 0.055,
     sound: "pistol",
-    auto: true,
+    auto: false,
     slot: 3,
   },
 };

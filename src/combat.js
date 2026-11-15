@@ -1,6 +1,19 @@
 import * as THREE from "three";
 import { clamp, rand } from "./utils.js";
 
+// Pure function: fraction of base damage dealt at a given distance.
+// Full damage inside 40% of range, then curves down to a per-weapon floor
+// so long-range chip damage stays meaningful but shotguns fall off hard.
+export function damageFalloff(distance, range, weaponId) {
+  if (!(distance > 0) || !(range > 0)) return 1;
+  const start = range * 0.4;
+  if (distance <= start) return 1;
+  const t = clamp((distance - start) / (range - start), 0, 1);
+  const floor = weaponId === "shotgun" ? 0.2 : weaponId === "rifle" ? 0.55 : 0.45;
+  const curve = weaponId === "shotgun" ? 1.6 : 1.1;
+  return Math.max(floor, 1 - Math.pow(t, curve) * (1 - floor));
+}
+
 export class CombatSystem {
   constructor(game) {
     this.game = game;
@@ -42,7 +55,8 @@ export class CombatSystem {
       hitZombie = true;
       headshot = zombieHit.headshot;
       hitPoint = zombieHit.point.clone();
-      const result = zombieHit.zombie.takeDamage(weapon.damage, {
+      const falloff = damageFalloff(zombieDistance, weapon.range, weapon.id);
+      const result = zombieHit.zombie.takeDamage(weapon.damage * falloff * rand(0.92, 1.08), {
         headshot,
         direction,
         killer: shooter,
