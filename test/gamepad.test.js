@@ -49,4 +49,10 @@ describe("moveIntent", () => {
     expect(moveIntent(0, -0.5).forward).toBe(true);
     expect(moveIntent(0.5, 0).right).toBe(true);
   });
+
+  it("sprints on full tilt in any direction, not just cardinal", () => {
+    expect(moveIntent(0, -1).sprint).toBe(true);
+    expect(moveIntent(0.72, -0.72).sprint).toBe(true);
+    expect(moveIntent(0, -0.5).sprint).toBe(false);
+  });
 });

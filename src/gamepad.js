@@ -48,6 +48,7 @@ export function lookDelta(axis, dt, rate = LOOK_RATE) {
 }
 
 // Pure: -1..1 stick pair -> digital move intent + sprint flag.
+// Sprint keys off raw deflection so full tilt sprints in any direction.
 export function moveIntent(x, y) {
   const shapedX = shapeAxis(x);
   const shapedY = shapeAxis(y);
@@ -57,7 +58,7 @@ export function moveIntent(x, y) {
     back: shapedY > 0.08,
     left: shapedX < -0.08,
     right: shapedX > 0.08,
-    sprint: magnitude > 0.92,
+    sprint: Math.hypot(x, y) > 0.92,
     magnitude: clamp(magnitude, 0, 1),
   };
 }
