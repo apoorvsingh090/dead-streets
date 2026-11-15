@@ -200,7 +200,7 @@ export class Director {
       if (this.spawnWaveZombie(wave, type)) {
         wave.spawnedBase += 1;
       }
-      wave.spawnClock = wave.baseInterval * rand(0.72, 1.16);
+      wave.spawnClock = wave.baseInterval * rand(0.72, 1.16) * (this.game.difficulty?.spawnScale ?? 1);
     }
 
     if (wave.elapsed >= wave.timeLimit) {
@@ -356,7 +356,7 @@ export class Director {
         const spawn = this.game.world.getSpawnPoint(player.position, 15, 31);
         this.game.zombies.spawn(type, spawn, { waveId: "finale" });
       }
-      this.finaleSpawnClock = 5.8 - difficulty * 2.1;
+      this.finaleSpawnClock = (5.8 - difficulty * 2.1) * (this.game.difficulty?.spawnScale ?? 1);
     }
 
     this.finaleSpecialClock -= dt;
@@ -428,7 +428,7 @@ export class Director {
   updateAmbientSpawns(dt) {
     this.ambientClock -= dt;
     if (this.ambientClock > 0) return;
-    this.ambientClock = rand(7, 12);
+    this.ambientClock = rand(7, 12) * (this.game.difficulty?.spawnScale ?? 1);
     if (this.game.zombies.getAliveCount() >= 14) return;
     if (this.game.player.position.z < -66) return;
     const spawn = this.game.world.getSpawnPoint(this.game.player.position, 22, 34);

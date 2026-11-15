@@ -180,7 +180,17 @@ export class ZombieManager {
 
   spawn(type, position, options = {}) {
     if (this.getAliveCount() >= 42) return null;
-    const zombie = new Zombie(this, type, position, options);
+    const diff = this.game.difficulty ?? {};
+    const zombie = new Zombie(
+      this,
+      type,
+      position,
+      {
+        healthScale: diff.healthScale ?? 1,
+        speedScale: diff.speedScale ?? 1,
+        ...options,
+      }
+    );
     this.zombies.push(zombie);
     return zombie;
   }

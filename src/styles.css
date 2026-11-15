@@ -416,6 +416,52 @@ kbd {
   line-height: 1.45;
 }
 
+.difficulty-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  max-width: 350px;
+}
+
+.difficulty-button {
+  flex: 1;
+  padding: 9px 4px;
+  border: 1px solid rgba(232, 226, 213, 0.28);
+  background: rgba(8, 10, 11, 0.55);
+  color: rgba(232, 226, 213, 0.72);
+  font-family: var(--ui);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.difficulty-button:hover {
+  border-color: rgba(232, 226, 213, 0.6);
+  color: var(--paper);
+}
+
+.difficulty-button.is-active {
+  border-color: var(--red);
+  background: rgba(198, 55, 50, 0.22);
+  color: var(--paper);
+}
+
+.difficulty-button:focus-visible {
+  outline: 2px solid var(--paper);
+  outline-offset: 2px;
+}
+
+.difficulty-sub {
+  margin-top: 8px;
+  max-width: 350px;
+  color: rgba(232, 226, 213, 0.45);
+  font-size: 11px;
+  font-style: italic;
+  letter-spacing: 0.05em;
+}
+
 .headphones-note {
   display: flex;
   align-items: center;

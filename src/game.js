@@ -9,10 +9,18 @@ import { ZombieManager } from "./zombies.js";
 import { Survivors } from "./survivors.js";
 import { Director } from "./director.js";
 import { CombatSystem } from "./combat.js";
+import {
+  DIFFICULTIES,
+  safeStoredDifficulty,
+  storeDifficulty,
+} from "./difficulty.js";
+
+export { DIFFICULTIES };
 
 export class Game {
   constructor() {
     this.state = "menu";
+    this.difficulty = DIFFICULTIES[safeStoredDifficulty()] ?? DIFFICULTIES.survivor;
     this.scene = null;
     this.camera = null;
     this.renderer = null;
@@ -58,6 +66,7 @@ export class Game {
       menuButton: document.getElementById("menu-button"),
       sensitivity: document.getElementById("sensitivity"),
       sensitivityOutput: document.getElementById("sensitivity-output"),
+      difficultySub: document.getElementById("difficulty-sub"),
       boot: document.getElementById("boot-screen"),
     };
 
@@ -181,6 +190,12 @@ export class Game {
     this.dom.quit?.addEventListener("click", () => window.location.reload());
     this.dom.retry?.addEventListener("click", () => window.location.reload());
     this.dom.menuButton?.addEventListener("click", () => window.location.reload());
+
+    this.difficultyButtons = [...document.querySelectorAll(".difficulty-button")];
+    for (const button of this.difficultyButtons) {
+      button.addEventListener("click", () => this.setDifficulty(button.dataset.difficulty));
+    }
+    this.refreshDifficultyButtons();
 
     const sensitivity = this.dom.sensitivity;
     if (sensitivity) {
@@ -372,6 +387,23 @@ export class Game {
     this.camera.rotation.order = "YXZ";
   }
 
+  setDifficulty(id) {
+    if (!DIFFICULTIES[id] || this.state !== "menu") return;
+    this.difficulty = DIFFICULTIES[id];
+    storeDifficulty(id);
+    this.refreshDifficultyButtons();
+    this.audio.click(this.audio.context?.currentTime ?? 0, 0.05, 900);
+  }
+
+  refreshDifficultyButtons() {
+    for (const button of this.difficultyButtons ?? []) {
+      button.classList.toggle("is-active", button.dataset.difficulty === this.difficulty.id);
+    }
+    if (this.dom.difficultySub) {
+      this.dom.difficultySub.textContent = this.difficulty.sub;
+    }
+  }
+
   startRun(options = {}) {
     if (this.state !== "menu") return;
     this.state = "playing";
@@ -432,7 +464,7 @@ export class Game {
     this.hud.announce(
       "SECTOR 01",
       "THE BLOCK",
-      "Push to the CEDA checkpoint.",
+      `Push to the CEDA checkpoint. — ${this.difficulty.name}`,
       false,
       2.8
     );
