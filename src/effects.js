@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { rand, randInt, clamp, createCanvasTexture, choice } from "./utils.js";
+import { loadPhoto, swapMap } from "./world/photo.js";
 
 const particleVertexShader = /* glsl */ `
   attribute float size;
@@ -227,6 +228,7 @@ export class Effects {
       polygonOffsetFactor: -2,
       color: 0xb55049,
     });
+    swapMap(material, loadPhoto("blood_splatter.jpg", { repeat: [1, 1] }), 0xffffff);
     const geometry = new THREE.PlaneGeometry(1, 1);
     for (let i = 0; i < 42; i += 1) {
       const mesh = new THREE.Mesh(geometry, material);

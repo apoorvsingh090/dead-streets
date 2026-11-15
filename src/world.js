@@ -9,6 +9,7 @@ import {
   makeSignTexture,
 } from "./world/textures.js";
 import { buildStreet, buildBuildings, buildSkyline, buildSky } from "./world/street.js";
+import { loadPhoto, swapMap } from "./world/photo.js";
 import { buildFurniture } from "./world/furniture.js";
 import {
   buildGates,
@@ -113,10 +114,13 @@ export class World {
         metalness: 0.58,
       }),
       roof: new THREE.MeshStandardMaterial({ color: 0x25292a, roughness: 0.95 }),
+      sandbag: new THREE.MeshStandardMaterial({ color: 0x4e4939, roughness: 1 }),
+      crate: new THREE.MeshStandardMaterial({ color: 0x8a8f7a, roughness: 0.9 }),
+      graffiti: new THREE.MeshStandardMaterial({ color: 0x9aa0a0, roughness: 0.94 }),
       facades: [],
     };
 
-    for (let i = 0; i < 5; i += 1) {
+    for (let i = 0; i < 3; i += 1) {
       const texture = makeFacadeTexture(i);
       texture.wrapS = THREE.RepeatWrapping;
       texture.wrapT = THREE.RepeatWrapping;
@@ -130,6 +134,33 @@ export class World {
         })
       );
     }
+
+    this.materials.facades.push(
+      new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.9,
+        metalness: 0.05,
+      }),
+      new THREE.MeshStandardMaterial({
+        color: 0x8f9396,
+        roughness: 0.85,
+        metalness: 0.1,
+      })
+    );
+
+    // AI photo textures swap in over the procedural base as they arrive.
+    // Anything that fails to load simply keeps its canvas material.
+    const photos = this.materials;
+    swapMap(photos.asphalt, loadPhoto("asphalt.jpg", { repeat: [4, 30] }), 0xffffff);
+    swapMap(photos.sidewalk, loadPhoto("sidewalk.jpg", { repeat: [1, 57] }), 0x8a8d8d);
+    swapMap(photos.metalRust, loadPhoto("metal_rust.jpg", { repeat: [1, 1] }), 0xd8d8d8);
+    swapMap(photos.wood, loadPhoto("wood_planks.jpg", { repeat: [1, 1] }), 0xe8e8e8);
+    swapMap(photos.shutter, loadPhoto("barricade_chevron.jpg", { repeat: [3, 1] }), 0xffffff);
+    swapMap(photos.sandbag, loadPhoto("sandbags.jpg", { repeat: [1, 1] }), 0xcfc4ae);
+    swapMap(photos.crate, loadPhoto("crate_ceda.jpg", { repeat: [1, 0.45], offset: [0, 0.28] }), 0xffffff);
+    swapMap(photos.graffiti, loadPhoto("graffiti_wall.jpg", { repeat: [1, 1] }), 0xbfc4c4);
+    swapMap(photos.facades[3], loadPhoto("facade_brick.jpg", { repeat: [2, 2] }));
+    swapMap(photos.facades[4], loadPhoto("facade_concrete.jpg", { repeat: [2, 2] }));
   }
 
   buildLighting() {

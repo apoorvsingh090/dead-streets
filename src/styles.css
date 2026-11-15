@@ -108,7 +108,8 @@ kbd {
   padding: 28px 42px 24px;
   background:
     linear-gradient(90deg, rgba(4, 6, 7, 0.97) 0%, rgba(4, 6, 7, 0.83) 38%, rgba(4, 6, 7, 0.24) 72%, rgba(4, 6, 7, 0.5) 100%),
-    linear-gradient(180deg, rgba(4, 6, 7, 0.6) 0%, transparent 24%, transparent 63%, rgba(4, 6, 7, 0.94) 100%);
+    linear-gradient(180deg, rgba(4, 6, 7, 0.6) 0%, transparent 24%, transparent 63%, rgba(4, 6, 7, 0.94) 100%),
+    url("./assets/menu_keyart.jpg") center / cover no-repeat;
 }
 
 .menu-screen::before {

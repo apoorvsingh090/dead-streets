@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { rand, randInt, choice, createCanvasTexture } from "../utils.js";
 import { makeSignTexture } from "./textures.js";
+import { loadPhoto, swapMap } from "./photo.js";
 
 const STREET_FACE = 10.75;
 
@@ -64,6 +65,28 @@ export function buildStreet(world) {
     stripe.position.set(x, 0.024, 6.6);
     scene.add(stripe);
     world.registerStatic(stripe, "concrete");
+  }
+
+  // Worn painted crossings; the photo's black backing stays invisible
+  // because it is used as an alpha mask, not an albedo.
+  const crosswalkMaterial = new THREE.MeshStandardMaterial({
+    color: 0xb9b49a,
+    roughness: 0.75,
+    transparent: true,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+  });
+  loadPhoto("crosswalk.jpg", { repeat: [1, 1], rotation: Math.PI / 2, srgb: false }).then((texture) => {
+    if (!texture) return;
+    crosswalkMaterial.alphaMap = texture;
+    crosswalkMaterial.needsUpdate = true;
+  });
+  for (const z of [52, -48]) {
+    const crossing = new THREE.Mesh(new THREE.PlaneGeometry(12, 3.1), crosswalkMaterial);
+    crossing.rotation.x = -Math.PI / 2;
+    crossing.position.set(0, 0.032, z);
+    scene.add(crossing);
+    world.registerStatic(crossing, "concrete");
   }
 
   const manholeGeometry = new THREE.CylinderGeometry(0.62, 0.62, 0.035, 20);
@@ -163,7 +186,7 @@ export function buildBuildings(world) {  for (const side of [-1, 1]) {
         const infillHeight = rand(7, 16);
         const infill = new THREE.Mesh(
           new THREE.BoxGeometry(4.5, infillHeight, gap + 0.6),
-          world.materials.roof
+          Math.random() < 0.4 ? world.materials.graffiti : world.materials.roof
         );
         infill.position.set(
           side * (STREET_FACE + 2.2),
@@ -184,10 +207,13 @@ export function buildBuildings(world) {  for (const side of [-1, 1]) {
 // Distant silhouettes so the street never ends in flat fog.
 export function buildSkyline(world) {
   const materials = [
-    new THREE.MeshBasicMaterial({ color: 0x0d1316 }),
-    new THREE.MeshBasicMaterial({ color: 0x11181c }),
-    new THREE.MeshBasicMaterial({ color: 0x0a0f13 }),
+    new THREE.MeshBasicMaterial({ color: 0xd8dee2 }),
+    new THREE.MeshBasicMaterial({ color: 0xbfc8cc }),
+    new THREE.MeshBasicMaterial({ color: 0x9aa2a8 }),
   ];
+  swapMap(materials[0], loadPhoto("windows_lit.jpg", { repeat: [1, 1] }));
+  swapMap(materials[1], loadPhoto("windows_lit.jpg", { repeat: [1.5, 1.5] }));
+  swapMap(materials[2], loadPhoto("windows_lit.jpg", { repeat: [0.75, 0.75] }));
   let seed = 1234567;
   const srand = () => {
     seed = (seed * 1664525 + 1013904223) >>> 0;

@@ -426,10 +426,7 @@ function addFinaleCover(world) {
     color: 0x4e4e48,
     roughness: 0.94,
   });
-  const sandbagMaterial = new THREE.MeshStandardMaterial({
-    color: 0x4e4939,
-    roughness: 1,
-  });
+  const sandbagMaterial = world.materials.sandbag;
 
   for (const [x, z, rotation] of [
     [-7.0, -89, 0.1],

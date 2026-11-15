@@ -283,7 +283,7 @@ function createSupplyCache(world, x, z, name) {
   pallet.position.y = 0.07;
   group.add(pallet);
 
-  const crate = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.72, 1.28), world.materials.wood);
+  const crate = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.72, 1.28), world.materials.crate);
   crate.position.y = 0.5;
   group.add(crate);
 
