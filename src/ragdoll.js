@@ -1,6 +1,7 @@
-export const RAGDOLL_BODIES = 8;
+export const RAGDOLL_BODIES = 14;
 export const RAGDOLL_GIBS = 12;
 export const RAGDOLL_GRAVITY = 22;
+export const RAGDOLL_LIFE = 8;
 
 // Single rigid-body crumple: the whole corpse tips over ballistically and
 // settles flat, instead of scattering into blocks.

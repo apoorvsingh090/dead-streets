@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { rand, clamp, damp, choice, createCanvasTexture } from "./utils.js";
 import { ZOMBIE_TYPES, Zombie } from "./zombie.js";
-import { RAGDOLL_BODIES, RAGDOLL_GIBS, stepRagdollBody, stepRagdollChunk } from "./ragdoll.js";
+import { RAGDOLL_BODIES, RAGDOLL_GIBS, RAGDOLL_LIFE, stepRagdollBody, stepRagdollChunk } from "./ragdoll.js";
 
 export const MAX_ACID_POOLS = 8;
 
@@ -342,7 +342,7 @@ export class ZombieManager {
       lieZ: 0,
       restY: 0.2 * s,
       settled: false,
-      life: 9,
+      life: RAGDOLL_LIFE,
     });
     this.ragdollBodies += 1;
 
