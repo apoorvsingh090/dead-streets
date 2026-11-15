@@ -515,7 +515,7 @@ export class Game {
     this.hud.setInteraction("", false, 0);
     this.hud.flashDamage(-1);
     this.hud.hideTimer();
-    this.hud.setDowned(false, 0);
+    this.hud.setDowned(false);
 
     this.player.position.copy(this.world.startPosition);
     this.player.health = this.player.maxHealth;

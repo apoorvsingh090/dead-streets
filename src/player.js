@@ -460,7 +460,7 @@ export class Player {
     this.cancelReload();
     this.triggerDown = false;
     this.adsProgress = damp(this.adsProgress, 0, 8, dt);
-    this.game.hud.setDowned(true, Math.max(0, this.bleedout));
+    this.game.hud.setDowned(true);
 
     if (this.bleedout <= 0) {
       this.game.endRun(false, "You bled out in the street.");
@@ -526,7 +526,7 @@ export class Player {
     this.velocityZ = 0;
     this.verticalVelocity = 0;
     this.jumpOffset = 0;
-    this.game.hud.setDowned(true, this.bleedout);
+    this.game.hud.setDowned(true);
     this.game.hud.flashDamage(1);
     this.game.audio.hurt();
     this.game.onPlayerDowned();
@@ -541,7 +541,7 @@ export class Player {
     this.fireCooldown = 0;
     this.cancelReload();
     this.lastDamageTime = this.time;
-    this.game.hud.setDowned(false, 0);
+    this.game.hud.setDowned(false);
     this.game.hud.flashDamage(-0.5);
     this.game.hud.subtitle("SURVIVOR", "On your feet. We're not done yet.", 3);
     this.game.audio.heal();

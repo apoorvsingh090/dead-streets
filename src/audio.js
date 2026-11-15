@@ -30,7 +30,7 @@ export class Soundscape {
   }
 
   init() {
-    if (this.context) {
+    if (this.ready) {
       this.resume();
       return;
     }
@@ -38,33 +38,51 @@ export class Soundscape {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     if (!AudioContextClass) return;
 
-    const context = new AudioContextClass();
-    this.context = context;
+    try {
+      const context = new AudioContextClass();
+      this.context = context;
 
-    const compressor = context.createDynamicsCompressor();
-    compressor.threshold.value = -20;
-    compressor.knee.value = 16;
-    compressor.ratio.value = 7;
-    compressor.attack.value = 0.003;
-    compressor.release.value = 0.22;
-    compressor.connect(context.destination);
+      const compressor = context.createDynamicsCompressor();
+      compressor.threshold.value = -20;
+      compressor.knee.value = 16;
+      compressor.ratio.value = 7;
+      compressor.attack.value = 0.003;
+      compressor.release.value = 0.22;
+      compressor.connect(context.destination);
 
-    this.master = context.createGain();
-    this.master.gain.value = 0.775 * this.volume;
-    this.master.connect(compressor);
+      this.master = context.createGain();
+      this.master.gain.value = 0.775 * this.volume;
+      this.master.connect(compressor);
 
-    this.sfx = context.createGain();
-    this.sfx.gain.value = 0.9;
-    this.sfx.connect(this.master);
+      this.sfx = context.createGain();
+      this.sfx.gain.value = 0.9;
+      this.sfx.connect(this.master);
 
-    this.ambient = context.createGain();
-    this.ambient.gain.value = 0.8;
-    this.ambient.connect(this.master);
+      this.ambient = context.createGain();
+      this.ambient.gain.value = 0.8;
+      this.ambient.connect(this.master);
 
-    this.noiseBuffer = this.createNoiseBuffer(2.5);
-    this.buildAmbience();
-    this.ready = true;
-    this.resume();
+      this.noiseBuffer = this.createNoiseBuffer(2.5);
+      this.buildAmbience();
+      this.ready = true;
+      // Apply any muted/paused/volume/threat state set before init.
+      this.applyGain(0);
+      this.setThreat(this.threat);
+      this.resume();
+    } catch (error) {
+      console.warn("Audio init failed, will retry on next start:", error);
+      try {
+        this.context?.close?.().catch(() => {});
+      } catch {
+        // ignore
+      }
+      this.context = null;
+      this.master = null;
+      this.sfx = null;
+      this.ambient = null;
+      this.noiseBuffer = null;
+      this.ready = false;
+    }
   }
 
   createNoiseBuffer(seconds) {

@@ -197,6 +197,7 @@ export class HUD {
     if (!player) return;
     const weapon = player.weapon;
     const ammo = player.ammo;
+    if (!weapon || !ammo) return;
 
     if (this.cache.weaponId !== weapon.id) {
       this.cache.weaponId = weapon.id;
@@ -296,23 +297,19 @@ export class HUD {
     const clamped = clamp(progress, 0, 1);
     if (this.cache.reloadPct !== clamped) {
       this.cache.reloadPct = clamped;
-      this.reloadFill.style.width = `${clamped * 100}%`;
+      if (this.reloadFill) this.reloadFill.style.width = `${clamped * 100}%`;
     }
     if (this.cache.reloadingText !== active) {
       this.cache.reloadingText = active;
-      this.reloadText.classList.toggle("hidden", !active);
+      this.reloadText?.classList.toggle("hidden", !active);
     }
   }
 
-  setDowned(downed, bleedout = 0) {
-    this.downedStatus.classList.toggle("hidden", !downed);
+  setDowned(downed) {
+    // updateVitals owns the low-health overlay every frame; this only flips
+    // the downed banner and bleedout readout.
+    this.downedStatus?.classList.toggle("hidden", !downed);
     this.crosshair?.classList.toggle("is-hidden", downed);
-    if (downed) {
-      this.bleedoutTimer.textContent = String(Math.max(0, Math.ceil(bleedout)));
-      this.lowHealth?.classList.add("active");
-    } else if (this.cache.health > 34) {
-      this.lowHealth?.classList.remove("active");
-    }
   }
 
   setInteraction(text, visible, holdProgress = 0) {

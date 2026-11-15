@@ -175,18 +175,6 @@ function createBloodTexture() {
   });
 }
 
-function createGlowTexture() {
-  return createCanvasTexture(128, 128, (context, width, height) => {
-    const gradient = context.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, width / 2);
-    gradient.addColorStop(0, "rgba(255, 239, 190, 1)");
-    gradient.addColorStop(0.1, "rgba(255, 194, 96, 0.8)");
-    gradient.addColorStop(0.35, "rgba(224, 94, 38, 0.24)");
-    gradient.addColorStop(1, "rgba(160, 40, 12, 0)");
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, width, height);
-  });
-}
-
 const BLOOD_COLORS = [
   new THREE.Color(0x5b0908),
   new THREE.Color(0x740d0a),
@@ -225,7 +213,6 @@ export class Effects {
     this.lightningFlash = 0;
     this.buildDecalPool();
     this.buildRain();
-    this.glowTexture = createGlowTexture();
   }
 
   buildDecalPool() {
@@ -600,10 +587,12 @@ export class Effects {
     this.decals.forEach((decal) => {
       decal.visible = false;
     });
+    this.decalCursor = 0;
     this.tracers.forEach((tracer) => {
       tracer.life = 0;
       tracer.line.visible = false;
     });
+    this.tracerCursor = 0;
     this.flashes.forEach((flash) => {
       this.scene.remove(flash.light);
       if (flash.mesh) {
