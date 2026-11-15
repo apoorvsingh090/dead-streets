@@ -1,6 +1,6 @@
 {
   "name": "dead-streets",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "A Left 4 Dead-inspired browser FPS. Four survivors, one city block, no rescue coming.",
   "type": "module",
