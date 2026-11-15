@@ -102,8 +102,7 @@ export function buildStreet(world) {
   }
 }
 
-export function buildBuildings(world) {
-  for (const side of [-1, 1]) {
+export function buildBuildings(world) {  for (const side of [-1, 1]) {
     let cursor = 109;
     while (cursor > -112) {
       const frontage = rand(14, 22);
@@ -124,6 +123,8 @@ export function buildBuildings(world) {
         ]
       );
       building.position.set(side * (STREET_FACE + depth / 2), height / 2, centerZ);
+      building.castShadow = true;
+      building.receiveShadow = true;
       world.scene.add(building);
       world.registerStatic(building, "concrete");
 
@@ -132,6 +133,7 @@ export function buildBuildings(world) {
         world.materials.roof
       );
       parapet.position.set(side * (STREET_FACE + depth / 2), height + 0.2, centerZ);
+      parapet.castShadow = true;
       world.scene.add(parapet);
       world.registerStatic(parapet, "concrete");
 
@@ -168,6 +170,8 @@ export function buildBuildings(world) {
           infillHeight / 2,
           centerZ - frontage / 2 - gap / 2
         );
+        infill.castShadow = true;
+        infill.receiveShadow = true;
         world.scene.add(infill);
         world.registerStatic(infill, "concrete");
       }
@@ -218,6 +222,78 @@ export function buildSkyline(world) {
     mesh.position.set(tower.x, tower.h / 2 - 0.5, tower.z);
     world.scene.add(mesh);
   }
+}
+
+export function buildSky(world) {
+  // Gradient dome + moon + stars. Fog-proof (material.fog = false) so the
+  // skyline reads against a sky instead of flat background color.
+  const canvas = document.createElement("canvas");
+  canvas.width = 4;
+  canvas.height = 256;
+  const context = canvas.getContext("2d");
+  const gradient = context.createLinearGradient(0, 0, 0, 256);
+  gradient.addColorStop(0, "#020407");
+  gradient.addColorStop(0.45, "#0a1418");
+  gradient.addColorStop(0.72, "#16242b");
+  gradient.addColorStop(0.86, "#2c2f22");
+  gradient.addColorStop(1, "#0b0e0c");
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, 4, 256);
+  const skyTexture = new THREE.CanvasTexture(canvas);
+  skyTexture.colorSpace = THREE.SRGBColorSpace;
+
+  const dome = new THREE.Mesh(
+    new THREE.SphereGeometry(195, 24, 16),
+    new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide, fog: false })
+  );
+  world.scene.add(dome);
+
+  const moon = new THREE.Mesh(
+    new THREE.CircleGeometry(7, 32),
+    new THREE.MeshBasicMaterial({ color: 0xdfe9ec, fog: false, toneMapped: false })
+  );
+  moon.position.set(-70, 105, -120);
+  moon.lookAt(0, 10, 0);
+  world.scene.add(moon);
+
+  const moonGlow = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: world.materials.glowTexture,
+      color: 0x9db8c4,
+      transparent: true,
+      opacity: 0.5,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      fog: false,
+    })
+  );
+  moonGlow.scale.set(46, 46, 1);
+  moonGlow.position.copy(moon.position);
+  world.scene.add(moonGlow);
+
+  const starGeo = new THREE.BufferGeometry();
+  const starCount = 260;
+  const positions = new Float32Array(starCount * 3);
+  for (let i = 0; i < starCount; i += 1) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.random() * Math.PI * 0.42;
+    positions[i * 3] = 185 * Math.sin(phi) * Math.cos(theta);
+    positions[i * 3 + 1] = 185 * Math.cos(phi) + 4;
+    positions[i * 3 + 2] = 185 * Math.sin(phi) * Math.sin(theta);
+  }
+  starGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  const stars = new THREE.Points(
+    starGeo,
+    new THREE.PointsMaterial({
+      color: 0xcdd8dc,
+      size: 1.4,
+      sizeAttenuation: false,
+      transparent: true,
+      opacity: 0.65,
+      fog: false,
+    })
+  );
+  world.scene.add(stars);
 }
 
 function addBuildingDetails(world, side, centerZ, frontage, height) {

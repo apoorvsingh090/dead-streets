@@ -1,4 +1,9 @@
 ﻿import * as THREE from "three";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { clamp, formatTime } from "./utils.js";
 import { World } from "./world.js";
 import { Effects } from "./effects.js";
@@ -150,6 +155,14 @@ export class Game {
     const ratio = this.quality === "low" ? 1 : Math.min(window.devicePixelRatio || 1, 1.75);
     this.renderer.setPixelRatio(ratio);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.useComposer = this.quality !== "low" && this.composer != null;
+    if (this.composer) {
+      this.composer.setPixelRatio(ratio);
+      this.composer.setSize(window.innerWidth, window.innerHeight);
+    }
+    if (this.world?.moonLight) {
+      this.world.moonLight.castShadow = this.quality !== "low";
+    }
     if (this.dom.qualityButton) {
       this.dom.qualityButton.textContent = this.quality.toUpperCase();
     }
@@ -186,6 +199,8 @@ export class Game {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.16;
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.domElement.id = "game-canvas";
     this.renderer.domElement.setAttribute("aria-label", "Dead Streets game viewport");
     document.getElementById("game-root").appendChild(this.renderer.domElement);
@@ -211,6 +226,43 @@ export class Game {
     );
     this.viewScene.add(this.viewCamera);
     this.setupViewLighting();
+
+    // Image-based lighting so PBR metals, wet asphalt, and glass read as
+    // reflective instead of flat. Kept subtle to preserve the night mood.
+    // Shared with the viewmodel scene so the guns get the same spec life.
+    try {
+      const pmrem = new THREE.PMREMGenerator(this.renderer);
+      const envTexture = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+      this.scene.environment = envTexture;
+      this.scene.environmentIntensity = 0.32;
+      this.viewScene.environment = envTexture;
+      this.viewScene.environmentIntensity = 0.5;
+      pmrem.dispose();
+    } catch (error) {
+      console.warn("IBL environment unavailable:", error);
+    }
+
+    // Bloom for neon, muzzle flash, explosions, and lightning.
+    // Multisampled target keeps edges clean despite post-processing.
+    this.useComposer = true;
+    try {
+      const size = new THREE.Vector2(window.innerWidth, window.innerHeight);
+      const target = new THREE.WebGLRenderTarget(size.x, size.y, {
+        type: THREE.HalfFloatType,
+        samples: 4,
+      });
+      this.composer = new EffectComposer(this.renderer, target);
+      this.composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+      this.composer.setSize(size.x, size.y);
+      this.composer.addPass(new RenderPass(this.scene, this.camera));
+      this.bloomPass = new UnrealBloomPass(size.clone(), 0.45, 0.55, 0.82);
+      this.composer.addPass(this.bloomPass);
+      this.composer.addPass(new OutputPass());
+    } catch (error) {
+      console.warn("Post-processing unavailable, using direct rendering:", error);
+      this.composer = null;
+      this.useComposer = false;
+    }
   }
 
   setupViewLighting() {
@@ -731,7 +783,11 @@ export class Game {
     }
 
     this.renderer.autoClear = true;
-    this.renderer.render(this.scene, this.camera);
+    if (this.useComposer && this.composer) {
+      this.composer.render();
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
 
     if (this.state === "playing" && this.player && !this.player.downed) {
       this.renderer.autoClear = false;

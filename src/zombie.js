@@ -228,6 +228,13 @@ export class Zombie {
     shadow.renderOrder = 1;
     this.root.add(shadow);
     this.shadow = shadow;
+
+    // Real-time moon shadows; skip the blob decal and the invisible head proxy.
+    this.model.traverse((child) => {
+      if (child.isMesh && child.material.visible !== false) {
+        child.castShadow = true;
+      }
+    });
   }
 
   setLocomotion(name, force = false) {
@@ -478,6 +485,9 @@ export class Zombie {
       if (child.isMesh && !child.userData.zombie && child !== shadow) {
         child.userData.zombie = this;
         this.hitMeshes.push(child);
+      }
+      if (child.isMesh && child !== shadow) {
+        child.castShadow = true;
       }
     });
   }

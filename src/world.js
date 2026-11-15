@@ -8,7 +8,7 @@ import {
   makeFireTexture,
   makeSignTexture,
 } from "./world/textures.js";
-import { buildStreet, buildBuildings, buildSkyline } from "./world/street.js";
+import { buildStreet, buildBuildings, buildSkyline, buildSky } from "./world/street.js";
 import { buildFurniture } from "./world/furniture.js";
 import {
   buildGates,
@@ -52,6 +52,7 @@ export class World {
     buildStreet(this);
     buildBuildings(this);
     buildSkyline(this);
+    buildSky(this);
     buildFurniture(this);
     buildGates(this);
     buildSafehouses(this);
@@ -137,7 +138,19 @@ export class World {
 
     this.moonLight = new THREE.DirectionalLight(0x9db1bd, 0.72);
     this.moonLight.position.set(-28, 36, 44);
+    this.moonLight.castShadow = true;
+    this.moonLight.shadow.mapSize.set(2048, 2048);
+    this.moonLight.shadow.camera.left = -32;
+    this.moonLight.shadow.camera.right = 32;
+    this.moonLight.shadow.camera.top = 32;
+    this.moonLight.shadow.camera.bottom = -32;
+    this.moonLight.shadow.camera.near = 1;
+    this.moonLight.shadow.camera.far = 130;
+    this.moonLight.shadow.bias = -0.0004;
+    this.moonLight.shadow.normalBias = 0.025;
+    this.moonLight.shadow.radius = 4;
     this.scene.add(this.moonLight);
+    this.scene.add(this.moonLight.target);
 
     this.ambient = new THREE.AmbientLight(0x303a3d, 0.52);
     this.scene.add(this.ambient);
@@ -400,6 +413,17 @@ export class World {
 
   update(dt, playerPosition) {
     this.time += dt;
+
+    // Keep the shadow frustum centered on the action.
+    if (this.moonLight) {
+      this.moonLight.position.set(
+        playerPosition.x - 24,
+        36,
+        playerPosition.z + 38
+      );
+      this.moonLight.target.position.copy(playerPosition);
+      this.moonLight.target.updateMatrixWorld();
+    }
 
     for (const gate of this.gates) {
       if (!gate.opening) continue;

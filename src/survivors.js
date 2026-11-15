@@ -228,6 +228,10 @@ function createBotModel(shared, config) {
   shadow.scale.set(1.1, 1.2, 1);
   root.add(shadow);
 
+  root.traverse((child) => {
+    if (child.isMesh && child !== shadow) child.castShadow = true;
+  });
+
   return {
     root,
     bodyGroup,
@@ -307,6 +311,9 @@ class SurvivorBot {
     const clone = cloneSkinned(asset.scene);
     // Quaternius soldiers are ~1.84m tall; our eye/hearing heights assume ~1.8m.
     clone.scale.setScalar(0.98);
+    clone.traverse((child) => {
+      if (child.isMesh) child.castShadow = true;
+    });
     bodyGroup.add(clone);
 
     const mixer = new THREE.AnimationMixer(clone);
