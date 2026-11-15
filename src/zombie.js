@@ -321,6 +321,9 @@ export class Zombie {
       shirtMaterial = choice(shared.shirts);
       pantsMaterial = choice(shared.pants);
     }
+    this.skinMaterial = skinMaterial;
+    this.shirtMaterial = shirtMaterial;
+    this.pantsMaterial = pantsMaterial;
 
     const torso = mesh(shared.torsoGeometry, shirtMaterial, this.bodyGroup);
     torso.position.y = 1.18;
@@ -678,9 +681,11 @@ export class Zombie {
   maybeHitClip(headshot) {
     if (this.isProceduralModel || !this.actions?.hit) return;
     if (this.hitCooldown > 0 || this.attackLock > 0) return;
-    if (!headshot && Math.random() > 0.4) return;
+    // Headshots always snap the head back; body hits flinch most of the time
+    // so every shot visibly connects.
+    if (!headshot && Math.random() > 0.65) return;
     this.playOneShot("hit");
-    this.hitCooldown = 1.0;
+    this.hitCooldown = 0.6;
   }
 
   applyKnockback(dt) {
@@ -784,56 +789,15 @@ export class Zombie {
     this.alive = false;
     this.deathTime = 0;
     this.manager.unregisterHitMeshes(this);
-    this.fallDirection = Math.random() < 0.5 ? -1 : 1;
-    if (direction) {
-      const local = Math.atan2(direction.x, direction.z) - this.heading;
-      this.fallDirection = Math.cos(local) > 0 ? 1 : -1;
-    }
-    this.startDeathAnimation();
+    this.root.visible = false;
+    this.manager.spawnRagdoll(this, direction, headshot);
     this.manager.registerDeath(this);
     this.game.onZombieKilled(this, headshot, killer);
     this.manager.audio.zombieDie(this.manager.panFor(this.position));
   }
 
-  startDeathAnimation() {
-    if (this.isProceduralModel || !this.actions?.die) return;
-    if (this.deathStarted) return;
-    this.deathStarted = true;
-    this.attackLock = 0;
-    this.attackAction = null;
-    this.oneShotAction = null;
-    if (this.currentLoco) {
-      this.currentLoco.stop();
-      this.currentLoco = null;
-    }
-    const death = this.actions.die;
-    death.reset();
-    death.setLoop(THREE.LoopOnce, 1);
-    death.clampWhenFinished = true;
-    death.fadeIn(0.15);
-    death.play();
-  }
-
   updateDeath(dt) {
     this.deathTime += dt;
-    if (!this.isProceduralModel) {
-      this.mixer.update(dt);
-      if (this.deathTime > 6.5) {
-        this.root.position.y -= dt * 0.22;
-      }
-      if (this.deathTime > 10) {
-        this.manager.removeZombie(this);
-      }
-      return;
-    }
-    const fallProgress = clamp(this.deathTime / 0.65, 0, 1);
-    const eased = 1 - Math.pow(1 - fallProgress, 3);
-    this.bodyGroup.rotation.x = eased * 1.45 * this.fallDirection;
-    this.bodyGroup.position.y = Math.sin(eased * Math.PI) * 0.12;
-
-    if (this.deathTime > 6.5) {
-      this.root.position.y -= dt * 0.22;
-    }
     if (this.deathTime > 10) {
       this.manager.removeZombie(this);
     }

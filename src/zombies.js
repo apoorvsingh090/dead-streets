@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { rand, clamp, damp, choice, createCanvasTexture } from "./utils.js";
 import { ZOMBIE_TYPES, Zombie } from "./zombie.js";
+import { RAGDOLL_BURSTS, stepRagdollChunk } from "./ragdoll.js";
 
 export const MAX_ACID_POOLS = 8;
 
@@ -167,6 +168,8 @@ export class ZombieManager {
     this.corpses = [];
     this.distraction = { position: new THREE.Vector3(), timer: 0 };
     this.targetBuffer = [];
+    this.ragdolls = [];
+    this.ragdollBursts = 0;
 
     this.projectileGeometry = new THREE.SphereGeometry(0.16, 8, 6);
     this.projectileMaterial = new THREE.MeshBasicMaterial({ color: 0xb7e65b, toneMapped: false });
@@ -243,6 +246,132 @@ export class ZombieManager {
 
     this.updateProjectiles(dt);
     this.updateAcidPools(dt);
+    this.updateRagdolls(dt);
+  }
+
+  // Cheap chunk-ragdoll: body parts with ballistic motion + ground bounce.
+  // No physics engine needed; reads as a real collapse instead of a tip-over.
+  spawnRagdoll(zombie, direction, headshot = false) {
+    if (!this._ragdollBox) {
+      this._ragdollBox = new THREE.BoxGeometry(1, 1, 1);
+      this._ragdollBall = new THREE.SphereGeometry(1, 8, 6);
+      this._ragdollMats = new Map();
+    }
+    const matFor = (materialOrColor) => {
+      if (materialOrColor?.isMaterial) return materialOrColor;
+      const key = `c${materialOrColor >>> 0}`;
+      if (!this._ragdollMats.has(key)) {
+        this._ragdollMats.set(
+          key,
+          new THREE.MeshStandardMaterial({ color: materialOrColor, roughness: 0.92 })
+        );
+      }
+      return this._ragdollMats.get(key);
+    };
+
+    // Palette: reuse the zombie's own shared materials when procedural,
+    // else sample the skinned mesh (cached per color, never disposed).
+    let skinMat = null;
+    let shirtMat = null;
+    let pantsMat = null;
+    if (zombie.skinMaterial) {
+      skinMat = zombie.skinMaterial;
+      shirtMat = zombie.shirtMaterial;
+      pantsMat = zombie.pantsMaterial;
+    } else if (zombie.model) {
+      const found = [];
+      zombie.model.traverse((child) => {
+        if (child.isMesh && child.material?.isMeshStandardMaterial && found.length < 3) {
+          const hex = child.material.color?.getHex();
+          if (hex !== undefined && !found.includes(hex)) found.push(hex);
+        }
+      });
+      skinMat = matFor(found[0] ?? 0x8a7a68);
+      shirtMat = matFor(found[1] ?? found[0] ?? 0x3c4442);
+      pantsMat = matFor(found[2] ?? found[0] ?? 0x202428);
+    } else {
+      skinMat = matFor(0x8a7a68);
+      shirtMat = matFor(0x3c4442);
+      pantsMat = matFor(0x202428);
+    }
+
+    const s = zombie.scale * (zombie.type === "brute" ? 1.52 : 1);
+    const dir = direction && (Math.abs(direction.x) + Math.abs(direction.z) > 0.01)
+      ? direction
+      : new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+    const heavy = zombie.type === "brute" ? 0.45 : 1;
+    const parts = [
+      { geo: "ball", mat: skinMat, size: [0.17, 0.17, 0.17], at: [0, 1.7, 0.02], pop: headshot ? 2.1 : 1 },
+      { geo: "box", mat: shirtMat, size: [0.55, 0.7, 0.3], at: [0, 1.15, 0], pop: 1 },
+      { geo: "box", mat: shirtMat, size: [0.13, 0.62, 0.13], at: [-0.4, 1.2, 0], pop: 1.25 },
+      { geo: "box", mat: skinMat, size: [0.13, 0.62, 0.13], at: [0.4, 1.2, 0], pop: 1.25 },
+      { geo: "box", mat: pantsMat, size: [0.18, 0.78, 0.2], at: [-0.17, 0.45, 0], pop: 0.9 },
+      { geo: "box", mat: pantsMat, size: [0.18, 0.78, 0.2], at: [0.17, 0.45, 0], pop: 0.9 },
+    ];
+    const heading = zombie.heading;
+    const cosH = Math.cos(heading);
+    const sinH = Math.sin(heading);
+    const burst = [];
+    for (const part of parts) {
+      const mesh = new THREE.Mesh(
+        part.geo === "ball" ? this._ragdollBall : this._ragdollBox,
+        part.mat
+      );
+      // Rotate local offsets by the zombie's facing so chunks start in place.
+      const lx = part.at[0] * s;
+      const lz = part.at[2] * s;
+      mesh.position.set(
+        zombie.position.x + lx * cosH + lz * sinH,
+        Math.max(0.12, part.at[1] * s),
+        zombie.position.z - lx * sinH + lz * cosH
+      );
+      mesh.scale.set(part.size[0] * s, part.size[1] * s, part.size[2] * s);
+      mesh.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+      this.scene.add(mesh);
+      const speed = (2 + Math.random() * 2.8) * part.pop * heavy;
+      burst.push({
+        mesh,
+        vx: dir.x * speed + (Math.random() - 0.5) * 1.6,
+        vy: (2.4 + Math.random() * 3) * part.pop * heavy,
+        vz: dir.z * speed + (Math.random() - 0.5) * 1.6,
+        ax: (Math.random() - 0.5) * 14,
+        ay: (Math.random() - 0.5) * 14,
+        az: (Math.random() - 0.5) * 14,
+        radius: Math.max(part.size[0], part.size[1], part.size[2]) * s * 0.5,
+        life: 7,
+      });
+    }
+    this.ragdolls.push(...burst);
+    this.ragdollBursts += 1;
+    // Cap bursts; geometries/materials are shared caches, so just unparent.
+    while (this.ragdollBursts > RAGDOLL_BURSTS) {
+      this.ragdollBursts -= 1;
+      for (let i = 0; i < 6 && this.ragdolls.length > 0; i += 1) {
+        const oldest = this.ragdolls.shift();
+        if (oldest.mesh.parent) this.scene.remove(oldest.mesh);
+      }
+    }
+    // Blood puff at the torso so the burst reads as an impact, not confetti.
+    const center = new THREE.Vector3(zombie.position.x, 1.2 * s, zombie.position.z);
+    this.game.effects.blood(center, new THREE.Vector3(0, 1, 0), headshot);
+  }
+
+  updateRagdolls(dt) {
+    for (let i = this.ragdolls.length - 1; i >= 0; i -= 1) {
+      const chunk = this.ragdolls[i];
+      chunk.life -= dt;
+      if (chunk.life <= 0) {
+        chunk.mesh.position.y -= dt * 0.5;
+        if (chunk.life < -1.6) {
+          if (chunk.mesh.parent) this.scene.remove(chunk.mesh);
+          this.ragdolls.splice(i, 1);
+        }
+        continue;
+      }
+      stepRagdollChunk(chunk, dt);
+    }
   }
 
   raycast(raycaster) {

@@ -488,6 +488,32 @@ class SurvivorBot {
     const followDistance = Math.hypot(dx, dz);
     this.followDistance = followDistance;
 
+    // Rescue leash: when the player is down, an ally stuck fighting or
+    // snagged across the map teleports in — bleeding out while watching
+    // your team fight elsewhere is not a mechanic.
+    if (playerDowned && followDistance > 14) {
+      const px = player.position.x;
+      const pz = player.position.z;
+      const spots = [
+        [px - 1.4, pz + 0.6],
+        [px + 1.4, pz + 0.6],
+        [px, pz + 2.2],
+        [px - 2.2, pz - 0.6],
+        [px + 2.2, pz - 0.6],
+      ];
+      for (const [tx, tz] of spots) {
+        if (!this.game.world.collidesCircle(tx, tz, this.radius)) {
+          this.position.set(tx, 0, tz);
+          this.velocityX = 0;
+          this.velocityZ = 0;
+          this.root.position.copy(this.position);
+          break;
+        }
+      }
+      dx = desiredX - this.position.x;
+      dz = desiredZ - this.position.z;
+    }
+
     if (followDistance > 1.4) {
       dx /= followDistance;
       dz /= followDistance;
@@ -538,7 +564,9 @@ class SurvivorBot {
     const dx = player.position.x - this.position.x;
     const dz = player.position.z - this.position.z;
     const distance = Math.hypot(dx, dz);
-    if (distance > 2.2) {
+    // Only drag toward the player when the player is also down — otherwise
+    // the revive target drifts away from cover while the player fights.
+    if (distance > 2.2 && player.downed) {
       this.velocityX = damp(this.velocityX, (dx / distance) * 1.1, 5, dt);
       this.velocityZ = damp(this.velocityZ, (dz / distance) * 1.1, 5, dt);
       this.game.world.resolveMovement(

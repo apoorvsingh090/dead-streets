@@ -871,9 +871,20 @@ export class Game {
       // will come auto-revive the player.
       const rescue = this.survivors.getNearbyRescuable(this.player.position, 2.25);
       if (!rescue) {
+        // No teammate in reach: point at the nearest one so the player
+        // learns to crawl instead of bleeding out confused.
+        const distant = this.survivors.getNearbyRescuable(this.player.position, 16);
+        if (distant) {
+          const dist = Math.hypot(
+            distant.position.x - this.player.position.x,
+            distant.position.z - this.player.position.z
+          );
+          this.hud.setInteraction(`CRAWL TO ${distant.name} — ${dist.toFixed(0)}M`, true, 0);
+        } else {
+          this.hud.setInteraction("", false, 0);
+        }
         this.currentInteraction = null;
         this.reviveHold = 0;
-        this.hud.setInteraction("", false, 0);
         return;
       }
       const holdTime = 3.5;

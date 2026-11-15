@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { clamp, lerp, damp, rand, createCanvasTexture } from "./utils.js";
+import { clamp, lerp, damp, rand, smoothstep, createCanvasTexture } from "./utils.js";
 
 export const WEAPONS = {
   rifle: {
@@ -555,7 +555,11 @@ export class WeaponView {
     const bobX = Math.sin(this.bobPhase) * 0.0082 * bobScale;
     const bobY = Math.abs(Math.cos(this.bobPhase)) * 0.0085 * bobScale;
     const breatheY = Math.sin(this.time * 1.45) * 0.0014 * (1 - movementIntensity * 0.5);
-    const reloadArc = reloading ? Math.sin(clamp(reloadProgress, 0, 1) * Math.PI) : 0;
+    // Two-stage mag change: tilt down + roll (mag out, first third),
+    // hold low, then rock back upright with a snap (mag seated).
+    const reloadP = reloading ? clamp(reloadProgress, 0, 1) : 0;
+    const reloadDip = smoothstep(0, 0.3, reloadP) * (1 - smoothstep(0.62, 1, reloadP));
+    const reloadSeat = smoothstep(0.66, 0.84, reloadP) * (1 - smoothstep(0.84, 1, reloadP));
     const switchArc = this.switchOffset;
     const shoveArc = Math.sin(clamp(this.shoveTimer, 0, 1) * Math.PI);
 
@@ -565,7 +569,7 @@ export class WeaponView {
       lerp(basePos.y, model.adsPos.y, this.adsProgress) -
       bobY +
       breatheY -
-      reloadArc * 0.13 -
+      reloadDip * 0.16 -
       switchArc * 0.9 -
       this.sprintOffset * 0.04 +
       this.kick * 0.028;
@@ -581,18 +585,21 @@ export class WeaponView {
     const targetRotX =
       model.baseRot.x +
       this.kick * 0.045 +
-      reloadArc * 0.34 -
+      reloadDip * 0.52 -
+      reloadSeat * 0.1 -
       switchArc * 0.55 +
       this.sprintOffset * 0.12;
     const targetRotY =
       model.baseRot.y -
       this.lookSwayX * 0.03 -
       this.adsProgress * 0.02 +
-      shoveArc * 0.5;
+      shoveArc * 0.5 -
+      reloadSeat * 0.14;
     const targetRotZ =
       model.baseRot.z +
       this.lookSwayY * 0.02 +
-      reloadArc * 0.28 +
+      reloadDip * 0.36 -
+      reloadSeat * 0.24 +
       this.sprintOffset * 0.1 -
       shoveArc * 0.18;
 
