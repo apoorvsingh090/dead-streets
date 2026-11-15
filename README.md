@@ -53,6 +53,20 @@ Pick a difficulty (**Civilian / Survivor / Nightmare**), click **Enter the Stree
 | `F11` | Toggle fullscreen (desktop app) |
 | `Esc` | Pause |
 
+### Controller
+
+Standard layout, connected any time — Start/A also starts a run from the menu.
+
+| Input | Action |
+| --- | --- |
+| Left stick | Move (full tilt sprints) |
+| Right stick | Look |
+| `RT` / `LT` | Fire / Aim |
+| `A` / `B` / `X` / `Y` | Jump / Shove / Reload / Use + revive |
+| `LB` / `RB` | Cycle weapons |
+| `D-down` / `D-right` | Medkit / Pipe bomb |
+| `Start` / `Back` | Pause / Mute |
+
 ## Run Objectives
 
 1. Push to the CEDA checkpoint and survive the first horde.
