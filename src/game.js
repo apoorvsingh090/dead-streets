@@ -497,6 +497,7 @@ export class Game {
     this.interactPressed = false;
     this.currentInteraction = null;
     this.reviveHold = 0;
+    this.gamepad.resetEdges();
 
     if (options.audio !== false) {
       try {
@@ -585,6 +586,7 @@ export class Game {
     if (this.state !== "playing") return;
     this.state = "paused";
     this.releaseInput();
+    this.gamepad.resetEdges();
     this.hud.setInteraction("", false, 0);
     this.audio.setPaused(true);
     this.dom.pause?.classList.remove("hidden");
@@ -596,6 +598,7 @@ export class Game {
   resumeGame() {
     if (this.state !== "paused") return;
     this.state = "playing";
+    this.gamepad.resetEdges();
     this.dom.pause?.classList.add("hidden");
     this.audio.setPaused(false);
     this.requestPointerLock();
@@ -611,7 +614,10 @@ export class Game {
     this.input.fire = false;
     this.input.aim = false;
     this.input.interact = false;
+    this.interactPressed = false;
     this.reviveHold = 0;
+    this.gamepad.padFiring = false;
+    this.gamepad.padInteracting = false;
     this.player?.setTrigger(false);
   }
 
@@ -638,14 +644,14 @@ export class Game {
       this.dom.endKicker.textContent = victory ? "RUN COMPLETE" : "THE RUN IS OVER";
     }
     if (this.dom.endTitle) this.dom.endTitle.textContent = victory ? "EXTRACTED" : "YOU DIED";
+    const { isNewBest } = considerBest({
+      victory,
+      kills: this.stats.kills,
+      time: this.runElapsed,
+      difficulty: this.difficulty.id,
+    });
+    this.renderBestLine();
     if (this.dom.endCopy) {
-      const { isNewBest } = considerBest({
-        victory,
-        kills: this.stats.kills,
-        time: this.runElapsed,
-        difficulty: this.difficulty.id,
-      });
-      this.renderBestLine();
       const base =
         reason ??
         (victory

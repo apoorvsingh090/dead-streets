@@ -53,10 +53,10 @@ export function moveIntent(x, y) {
   const shapedY = shapeAxis(y);
   const magnitude = Math.hypot(shapedX, shapedY);
   return {
-    forward: shapedY < -0.18,
-    back: shapedY > 0.18,
-    left: shapedX < -0.18,
-    right: shapedX > 0.18,
+    forward: shapedY < -0.08,
+    back: shapedY > 0.08,
+    left: shapedX < -0.08,
+    right: shapedX > 0.08,
     sprint: magnitude > 0.92,
     magnitude: clamp(magnitude, 0, 1),
   };
@@ -112,9 +112,18 @@ export class GamepadController {
     }
   }
 
+  // Clears latched button edges; call on pause/resume/start so a button
+  // held across the transition does not fire on the first frame after it.
+  resetEdges() {
+    this.previous.clear();
+  }
+
   updateMenu(game) {
     this.announceIfNew(game);
-    if ((this.justPressed(BUTTON.START) || this.justPressed(BUTTON.A)) && game.state === "menu") {
+    if (game.state !== "menu") return;
+    const startPressed = this.justPressed(BUTTON.START);
+    const aPressed = this.justPressed(BUTTON.A);
+    if (startPressed || aPressed) {
       game.startRun();
     }
   }
@@ -126,11 +135,13 @@ export class GamepadController {
     const input = game.input;
 
     const move = moveIntent(pad.axes[0] ?? 0, pad.axes[1] ?? 0);
-    input.forward = move.forward;
-    input.back = move.back;
-    input.left = move.left;
-    input.right = move.right;
-    input.sprint = move.sprint;
+    // OR-merge: a centered stick contributes nothing, so keyboard input
+    // survives when a gamepad is merely connected.
+    input.forward = input.forward || move.forward;
+    input.back = input.back || move.back;
+    input.left = input.left || move.left;
+    input.right = input.right || move.right;
+    input.sprint = input.sprint || move.sprint;
 
     // Right stick look; convert degrees to the pixel units player.look expects.
     const yawDegrees = lookDelta(pad.axes[2] ?? 0, dt);
@@ -141,7 +152,7 @@ export class GamepadController {
     }
 
     const aimValue = pad.buttons[BUTTON.LT_ANALOG]?.value ?? 0;
-    input.aim = pressed(pad, BUTTON.LT_ANALOG) || aimValue > 0.35;
+    input.aim = input.aim || pressed(pad, BUTTON.LT_ANALOG) || aimValue > 0.35;
 
     const triggerValue = pad.buttons[BUTTON.RT_ANALOG]?.value ?? 0;
     const fireDown = pressed(pad, BUTTON.RT_ANALOG) || triggerValue > 0.35;

@@ -44,4 +44,9 @@ describe("moveIntent", () => {
     expect(intent.sprint).toBe(false);
     expect(intent.magnitude).toBe(0);
   });
+
+  it("responds to a moderate tilt, not just full deflection", () => {
+    expect(moveIntent(0, -0.5).forward).toBe(true);
+    expect(moveIntent(0.5, 0).right).toBe(true);
+  });
 });

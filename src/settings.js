@@ -45,19 +45,25 @@ export function loadBest() {
     const raw = safeGet(BEST_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (typeof parsed?.kills !== "number") return null;
-    return parsed;
+    if (typeof parsed?.kills !== "number" || !Number.isFinite(parsed.kills)) return null;
+    return {
+      victory: Boolean(parsed.victory),
+      kills: parsed.kills,
+      time: Number.isFinite(parsed.time) ? parsed.time : 0,
+      difficulty: typeof parsed.difficulty === "string" ? parsed.difficulty : "survivor",
+    };
   } catch {
     return null;
   }
 }
 
 // Pure: a winning run beats any loss; otherwise more kills, then longer survival.
+// Exact ties do not count as new bests.
 export function isBetterRun(run, best) {
   if (!best) return true;
   if (Boolean(run.victory) !== Boolean(best.victory)) return Boolean(run.victory);
   if (run.kills !== best.kills) return run.kills > best.kills;
-  return run.time >= best.time;
+  return run.time > best.time;
 }
 
 // Returns the stored best after considering run (persists when improved).
@@ -78,8 +84,10 @@ export function considerBest(run) {
 
 export function formatBestLine(best) {
   if (!best) return "";
-  const minutes = Math.floor(best.time / 60);
-  const seconds = Math.floor(best.time % 60).toString().padStart(2, "0");
+  const time = Number.isFinite(best.time) ? best.time : 0;
+  const minutes = Math.floor(time / 60);
+  const seconds = Math.floor(time % 60).toString().padStart(2, "0");
   const outcome = best.victory ? "EXTRACTED" : "FELL";
-  return `BEST ${outcome} — ${best.kills} KILLS IN ${minutes}:${seconds} (${String(best.difficulty).toUpperCase()})`;
+  const difficulty = typeof best.difficulty === "string" ? best.difficulty : "survivor";
+  return `BEST ${outcome} — ${best.kills} KILLS IN ${minutes}:${seconds} (${difficulty.toUpperCase()})`;
 }
