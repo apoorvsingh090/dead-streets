@@ -1,11 +1,24 @@
 import { clamp, lerp, rand } from "./utils.js";
 
+const VOLUME_KEY = "dead-streets:volume";
+
+function loadVolume() {
+  try {
+    const raw = parseFloat(localStorage.getItem(VOLUME_KEY));
+    if (Number.isFinite(raw)) return clamp(raw, 0, 1);
+  } catch {
+    // ignore
+  }
+  return 0.8;
+}
+
 export class Soundscape {
   constructor() {
     this.context = null;
     this.ready = false;
     this.muted = false;
     this.paused = false;
+    this.volume = loadVolume();
     this.master = null;
     this.sfx = null;
     this.ambient = null;
@@ -37,7 +50,7 @@ export class Soundscape {
     compressor.connect(context.destination);
 
     this.master = context.createGain();
-    this.master.gain.value = 0.62;
+    this.master.gain.value = 0.775 * this.volume;
     this.master.connect(compressor);
 
     this.sfx = context.createGain();
@@ -146,16 +159,29 @@ export class Soundscape {
 
   setPaused(paused) {
     this.paused = paused;
-    if (!this.context || !this.master) return;
-    const target = paused ? 0.16 : this.muted ? 0 : 0.62;
-    this.master.gain.setTargetAtTime(target, this.context.currentTime, 0.08);
+    this.applyGain(0.08);
   }
 
   setMuted(muted) {
     this.muted = muted;
+    this.applyGain(0.05);
+  }
+
+  setVolume(volume) {
+    this.volume = clamp(volume, 0, 1);
+    try {
+      localStorage.setItem(VOLUME_KEY, String(this.volume));
+    } catch {
+      // ignore
+    }
+    this.applyGain(0.05);
+  }
+
+  applyGain(timeConstant = 0.05) {
     if (!this.context || !this.master) return;
-    const target = muted ? 0 : this.paused ? 0.16 : 0.62;
-    this.master.gain.setTargetAtTime(target, this.context.currentTime, 0.05);
+    const base = 0.775 * this.volume;
+    const target = this.muted ? 0 : this.paused ? base * 0.26 : base;
+    this.master.gain.setTargetAtTime(target, this.context.currentTime, timeConstant);
   }
 
   toggleMute() {

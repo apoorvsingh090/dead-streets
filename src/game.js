@@ -14,6 +14,16 @@ import {
   safeStoredDifficulty,
   storeDifficulty,
 } from "./difficulty.js";
+import {
+  SENSITIVITY_KEY,
+  considerBest,
+  formatBestLine,
+  loadBest,
+  loadNumber,
+  loadQuality,
+  saveNumber,
+  saveQuality,
+} from "./settings.js";
 
 export { DIFFICULTIES };
 
@@ -66,12 +76,19 @@ export class Game {
       menuButton: document.getElementById("menu-button"),
       sensitivity: document.getElementById("sensitivity"),
       sensitivityOutput: document.getElementById("sensitivity-output"),
+      volume: document.getElementById("volume"),
+      volumeOutput: document.getElementById("volume-output"),
+      qualityButton: document.getElementById("quality-button"),
       difficultySub: document.getElementById("difficulty-sub"),
+      bestLine: document.getElementById("best-line"),
       boot: document.getElementById("boot-screen"),
     };
 
+    this.quality = loadQuality();
+
     this.initRenderer();
     this.initWorld();
+    this.applyQuality();
 
     this.audio = new Soundscape();
     this.hud = new HUD();
@@ -118,6 +135,21 @@ export class Game {
       shotsHit: 0,
       startTime: performance.now(),
     };
+  }
+
+  applyQuality() {
+    const ratio = this.quality === "low" ? 1 : Math.min(window.devicePixelRatio || 1, 1.75);
+    this.renderer.setPixelRatio(ratio);
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    if (this.dom.qualityButton) {
+      this.dom.qualityButton.textContent = this.quality.toUpperCase();
+    }
+  }
+
+  toggleQuality() {
+    this.quality = this.quality === "low" ? "high" : "low";
+    saveQuality(this.quality);
+    this.applyQuality();
   }
 
   initRenderer() {
@@ -199,12 +231,39 @@ export class Game {
 
     const sensitivity = this.dom.sensitivity;
     if (sensitivity) {
+      const stored = loadNumber(SENSITIVITY_KEY, 1, 0.35, 2);
+      sensitivity.value = String(stored);
+      this.player.setSensitivity(stored);
+      if (this.dom.sensitivityOutput) {
+        this.dom.sensitivityOutput.textContent = stored.toFixed(2);
+      }
       sensitivity.addEventListener("input", () => {
         const value = parseFloat(sensitivity.value);
         this.player.setSensitivity(value);
-        this.dom.sensitivityOutput.textContent = value.toFixed(2);
+        saveNumber(SENSITIVITY_KEY, value);
+        if (this.dom.sensitivityOutput) {
+          this.dom.sensitivityOutput.textContent = value.toFixed(2);
+        }
       });
     }
+
+    const volume = this.dom.volume;
+    if (volume) {
+      volume.value = String(this.audio.volume);
+      if (this.dom.volumeOutput) {
+        this.dom.volumeOutput.textContent = `${Math.round(this.audio.volume * 100)}%`;
+      }
+      volume.addEventListener("input", () => {
+        const value = parseFloat(volume.value);
+        this.audio.setVolume(value);
+        if (this.dom.volumeOutput) {
+          this.dom.volumeOutput.textContent = `${Math.round(value * 100)}%`;
+        }
+      });
+    }
+
+    this.dom.qualityButton?.addEventListener("click", () => this.toggleQuality());
+    this.renderBestLine();
 
     this.renderer.domElement.addEventListener("contextmenu", (event) => {
       event.preventDefault();
@@ -481,6 +540,12 @@ export class Game {
     this.lastFrameTime = performance.now();
   }
 
+  renderBestLine() {
+    if (this.dom.bestLine) {
+      this.dom.bestLine.textContent = formatBestLine(loadBest());
+    }
+  }
+
   requestPointerLock() {
     if (!this.renderer?.domElement) return;
     try {
@@ -551,11 +616,19 @@ export class Game {
     }
     if (this.dom.endTitle) this.dom.endTitle.textContent = victory ? "EXTRACTED" : "YOU DIED";
     if (this.dom.endCopy) {
-      this.dom.endCopy.textContent =
+      const { isNewBest } = considerBest({
+        victory,
+        kills: this.stats.kills,
+        time: this.runElapsed,
+        difficulty: this.difficulty.id,
+      });
+      this.renderBestLine();
+      const base =
         reason ??
         (victory
           ? "The shelter door shuts behind you."
           : "The street keeps what it kills.");
+      this.dom.endCopy.textContent = isNewBest ? `${base} New best run.` : base;
     }
     if (this.dom.endKills) this.dom.endKills.textContent = String(this.stats.kills);
     if (this.dom.endSpecials) this.dom.endSpecials.textContent = String(this.stats.specials);
@@ -572,8 +645,7 @@ export class Game {
     this.camera.updateProjectionMatrix();
     this.viewCamera.aspect = window.innerWidth / window.innerHeight;
     this.viewCamera.updateProjectionMatrix();
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+    this.applyQuality();
   }
 
   animate() {
