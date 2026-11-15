@@ -9,6 +9,7 @@ import { ZombieManager } from "./zombies.js";
 import { Survivors } from "./survivors.js";
 import { Director } from "./director.js";
 import { CombatSystem } from "./combat.js";
+import { GamepadController } from "./gamepad.js";
 import {
   DIFFICULTIES,
   safeStoredDifficulty,
@@ -100,6 +101,7 @@ export class Game {
     this.survivors = new Survivors(this);
     this.combat = new CombatSystem(this);
     this.director = new Director(this);
+    this.gamepad = new GamepadController();
 
     this.player.view.root.visible = false;
     this.player.flashlight.intensity = 0;
@@ -658,6 +660,8 @@ export class Game {
       this.updateMenu(dt);
     } else if (this.state === "playing") {
       this.updatePlaying(dt);
+    } else if (this.state === "paused") {
+      this.gamepad.updatePaused(this);
     }
 
     this.renderer.autoClear = true;
@@ -673,6 +677,7 @@ export class Game {
 
   updateMenu(dt) {
     this.menuTime += dt;
+    this.gamepad.updateMenu(this);
     const t = this.menuTime;
     this.camera.position.set(
       Math.sin(t * 0.075) * 2.5,
@@ -688,6 +693,7 @@ export class Game {
   updatePlaying(dt) {
     this.runElapsed += dt;
 
+    this.gamepad.updatePlaying(this, dt);
     this.player.update(dt, this.input);
     if (this.state !== "playing") return;
 
