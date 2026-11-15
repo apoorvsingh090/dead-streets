@@ -519,12 +519,26 @@ export class ZombieManager {
           const dy = 1.0 - projectile.mesh.position.y;
           if (dx * dx + dz * dz + dy * dy < 0.85 * 0.85) {
             impacted = true;
+            projectile.hitTarget = target;
             break;
           }
         }
       }
 
       if (impacted) {
+        if (projectile.hitTarget) {
+          this.game.damageSurvivor(
+            projectile.hitTarget,
+            projectile.damage,
+            projectile.mesh.position,
+            null
+          );
+          this.game.effects.blood(
+            projectile.mesh.position.clone(),
+            new THREE.Vector3(0, 1, 0),
+            false
+          );
+        }
         this.createAcidPool(projectile.mesh.position, 2.15, 6.5);
         this.scene.remove(projectile.mesh);
         this.projectiles.splice(i, 1);
