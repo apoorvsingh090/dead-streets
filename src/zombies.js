@@ -2,6 +2,8 @@ import * as THREE from "three";
 import { rand, clamp, damp, choice, createCanvasTexture } from "./utils.js";
 import { ZOMBIE_TYPES, Zombie } from "./zombie.js";
 
+export const MAX_ACID_POOLS = 8;
+
 function buildSharedAssets() {
   const skin = [
     new THREE.MeshStandardMaterial({ color: 0x71806c, roughness: 0.94 }),
@@ -402,6 +404,9 @@ export class ZombieManager {
   }
 
   createAcidPool(position, radius = 2.15, duration = 6.5) {
+    while (this.acidPools.length >= MAX_ACID_POOLS) {
+      this.removeAcidPool(0);
+    }
     const groundPosition = new THREE.Vector3(position.x, 0.035, position.z);
     this.game.effects.acidSplash(groundPosition);
     const material = new THREE.MeshBasicMaterial({
@@ -414,7 +419,6 @@ export class ZombieManager {
     const mesh = new THREE.Mesh(new THREE.CircleGeometry(radius, 26), material);
     mesh.rotation.x = -Math.PI / 2;
     mesh.position.copy(groundPosition);
-    mesh.scale.y = 0.76;
     this.scene.add(mesh);
 
     this.acidPools.push({
@@ -426,6 +430,15 @@ export class ZombieManager {
       maxLife: duration,
       damageClock: 0.2,
     });
+  }
+
+  removeAcidPool(index) {
+    const pool = this.acidPools[index];
+    if (!pool) return;
+    this.scene.remove(pool.mesh);
+    pool.mesh.geometry.dispose();
+    pool.material.dispose();
+    this.acidPools.splice(index, 1);
   }
 
   updateAcidPools(dt) {
@@ -449,10 +462,7 @@ export class ZombieManager {
       }
 
       if (pool.life <= 0) {
-        this.scene.remove(pool.mesh);
-        pool.mesh.geometry.dispose();
-        pool.material.dispose();
-        this.acidPools.splice(i, 1);
+        this.removeAcidPool(i);
       }
     }
   }

@@ -207,12 +207,15 @@ const DEBRIS_COLORS = [
   new THREE.Color(0x36312b),
 ];
 
+export const MAX_TRACERS = 64;
+
 export class Effects {
   constructor(scene) {
     this.scene = scene;
     this.gore = new ParticlePool(scene, 900, THREE.NormalBlending);
     this.sparks = new ParticlePool(scene, 500, THREE.AdditiveBlending);
     this.tracers = [];
+    this.tracerCursor = 0;
     this.flashes = [];
     this.decals = [];
     this.decalCursor = 0;
@@ -328,15 +331,12 @@ export class Effects {
   }
 
   updateTracers(dt) {
-    for (let i = this.tracers.length - 1; i >= 0; i -= 1) {
-      const tracer = this.tracers[i];
+    for (const tracer of this.tracers) {
+      if (tracer.life <= 0) continue;
       tracer.life -= dt;
       tracer.material.opacity = Math.max(0, tracer.life / tracer.maxLife) * tracer.opacity;
       if (tracer.life <= 0) {
-        this.scene.remove(tracer.line);
-        tracer.line.geometry.dispose();
-        tracer.material.dispose();
-        this.tracers.splice(i, 1);
+        tracer.line.visible = false;
       }
     }
   }
@@ -364,20 +364,46 @@ export class Effects {
   }
 
   tracer(from, to, color = 0xffd49a, opacity = 0.52) {
-    const geometry = new THREE.BufferGeometry().setFromPoints([from, to]);
-    const material = new THREE.LineBasicMaterial({
-      color,
-      transparent: true,
-      opacity,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    });
-    const line = new THREE.Line(geometry, material);
-    line.frustumCulled = false;
-    line.renderOrder = 4;
-    this.scene.add(line);
-    const maxLife = rand(0.045, 0.09);
-    this.tracers.push({ line, material, life: maxLife, maxLife, opacity });
+    let slot = null;
+    for (const candidate of this.tracers) {
+      if (candidate.life <= 0) {
+        slot = candidate;
+        break;
+      }
+    }
+    if (!slot) {
+      if (this.tracers.length >= MAX_TRACERS) {
+        slot = this.tracers[this.tracerCursor];
+        this.tracerCursor = (this.tracerCursor + 1) % this.tracers.length;
+      } else {
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(6), 3));
+        const material = new THREE.LineBasicMaterial({
+          color,
+          transparent: true,
+          opacity,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        });
+        const line = new THREE.Line(geometry, material);
+        line.frustumCulled = false;
+        line.renderOrder = 4;
+        line.visible = false;
+        this.scene.add(line);
+        slot = { line, material, life: 0, maxLife: 0.07, opacity };
+        this.tracers.push(slot);
+      }
+    }
+    const positions = slot.line.geometry.attributes.position;
+    positions.setXYZ(0, from.x, from.y, from.z);
+    positions.setXYZ(1, to.x, to.y, to.z);
+    positions.needsUpdate = true;
+    slot.material.color.setHex(color);
+    slot.maxLife = rand(0.045, 0.09);
+    slot.life = slot.maxLife;
+    slot.opacity = opacity;
+    slot.material.opacity = opacity;
+    slot.line.visible = true;
   }
 
   impact(position, normal, material = "concrete") {
@@ -575,11 +601,9 @@ export class Effects {
       decal.visible = false;
     });
     this.tracers.forEach((tracer) => {
-      this.scene.remove(tracer.line);
-      tracer.line.geometry.dispose();
-      tracer.material.dispose();
+      tracer.life = 0;
+      tracer.line.visible = false;
     });
-    this.tracers.length = 0;
     this.flashes.forEach((flash) => {
       this.scene.remove(flash.light);
       if (flash.mesh) {
