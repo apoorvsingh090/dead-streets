@@ -155,7 +155,7 @@ function buildEndSafehouse(world) {
 
   const door = new THREE.Mesh(
     new THREE.BoxGeometry(5.25, 4.5, 0.42),
-    world.materials.shutter
+    world.materials.evacDoor
   );
   door.position.set(0, 2.25, -104.58);
   group.add(door);
@@ -359,7 +359,7 @@ export function buildGenerator(world) {
 
   const body = new THREE.Mesh(
     new THREE.BoxGeometry(1.75, 0.92, 1.16),
-    new THREE.MeshStandardMaterial({ color: 0x6b5c32, roughness: 0.66, metalness: 0.45 })
+    world.materials.generator
   );
   body.position.y = 0.64;
   group.add(body);
@@ -469,7 +469,7 @@ function addExplosiveBarrel(world, x, z) {
 
   const barrel = new THREE.Mesh(
     new THREE.CylinderGeometry(0.42, 0.42, 1.15, 16),
-    new THREE.MeshStandardMaterial({ color: 0x7c2b25, roughness: 0.68, metalness: 0.36 })
+    world.materials.barrelRed
   );
   barrel.position.y = 0.6;
   group.add(barrel);

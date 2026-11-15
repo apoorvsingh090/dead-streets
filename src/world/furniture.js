@@ -221,7 +221,7 @@ function addBus(world, x, z) {
 
 function addDumpster(world, x, z, rotation) {
   const dumpster = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.36, 2.5), world.materials.metalGreen);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.36, 2.5), world.materials.dumpster);
   body.position.y = 0.79;
   dumpster.add(body);
 

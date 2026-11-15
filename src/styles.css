@@ -1684,6 +1684,10 @@ kbd {
   background: transparent;
 }
 
+#screen-end {
+  background: url("./assets/menu_keyart2.jpg") center / cover no-repeat;
+}
+
 .overlay-scrim {
   position: absolute;
   inset: 0;

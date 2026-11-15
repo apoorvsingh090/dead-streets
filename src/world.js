@@ -117,6 +117,11 @@ export class World {
       sandbag: new THREE.MeshStandardMaterial({ color: 0x4e4939, roughness: 1 }),
       crate: new THREE.MeshStandardMaterial({ color: 0x8a8f7a, roughness: 0.9 }),
       graffiti: new THREE.MeshStandardMaterial({ color: 0x9aa0a0, roughness: 0.94 }),
+      dumpster: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.62, metalness: 0.35 }),
+      awning: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }),
+      generator: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, metalness: 0.4 }),
+      barrelRed: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, metalness: 0.4 }),
+      evacDoor: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55, metalness: 0.5 }),
       facades: [],
     };
 
@@ -159,8 +164,22 @@ export class World {
     swapMap(photos.sandbag, loadPhoto("sandbags.jpg", { repeat: [1, 1] }), 0xcfc4ae);
     swapMap(photos.crate, loadPhoto("crate_ceda.jpg", { repeat: [1, 0.45], offset: [0, 0.28] }), 0xffffff);
     swapMap(photos.graffiti, loadPhoto("graffiti_wall.jpg", { repeat: [1, 1] }), 0xbfc4c4);
+    swapMap(photos.roof, loadPhoto("roof_tar.jpg", { repeat: [2, 2] }), 0xd0d0d0);
+    swapMap(photos.dumpster, loadPhoto("dumpster_green.jpg", { repeat: [1, 1] }));
+    swapMap(photos.awning, loadPhoto("awning_stripes.jpg", { repeat: [2, 0.9], offset: [0, 0.07] }));
+    swapMap(photos.generator, loadPhoto("generator_panels.jpg", { repeat: [1, 1] }));
+    swapMap(photos.barrelRed, loadPhoto("barrel_hazard.jpg", { repeat: [1, 1] }));
+    swapMap(photos.evacDoor, loadPhoto("door_evac.jpg", { repeat: [1, 1] }));
     swapMap(photos.facades[3], loadPhoto("facade_brick.jpg", { repeat: [2, 2] }));
     swapMap(photos.facades[4], loadPhoto("facade_concrete.jpg", { repeat: [2, 2] }));
+    this.materials.facades.push(
+      new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.9,
+        metalness: 0.05,
+      })
+    );
+    swapMap(photos.facades[5], loadPhoto("facade_brick2.jpg", { repeat: [2, 2] }));
   }
 
   buildLighting() {

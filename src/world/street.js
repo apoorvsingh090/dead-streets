@@ -123,6 +123,27 @@ export function buildStreet(world) {
     scene.add(puddle);
     world.registerStatic(puddle, "concrete");
   }
+
+  // Scattered ground trash; dark backing melts into the asphalt.
+  const trashMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.95,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+  });
+  loadPhoto("trash_decal.jpg", { repeat: [1, 1] }).then((texture) => {
+    if (!texture) return;
+    trashMaterial.map = texture;
+    trashMaterial.needsUpdate = true;
+  });
+  for (let i = 0; i < 22; i += 1) {
+    const trash = new THREE.Mesh(new THREE.PlaneGeometry(rand(0.9, 2.4), rand(0.9, 2.4)), trashMaterial);
+    trash.rotation.x = -Math.PI / 2;
+    trash.rotation.z = rand(0, Math.PI * 2);
+    trash.position.set(rand(-7.5, 7.5), 0.029, rand(-100, 104));
+    scene.add(trash);
+    world.registerStatic(trash, "concrete");
+  }
 }
 
 export function buildBuildings(world) {  for (const side of [-1, 1]) {
@@ -210,10 +231,12 @@ export function buildSkyline(world) {
     new THREE.MeshBasicMaterial({ color: 0xd8dee2 }),
     new THREE.MeshBasicMaterial({ color: 0xbfc8cc }),
     new THREE.MeshBasicMaterial({ color: 0x9aa2a8 }),
+    new THREE.MeshBasicMaterial({ color: 0xc9d4d8 }),
   ];
   swapMap(materials[0], loadPhoto("windows_lit.jpg", { repeat: [1, 1] }));
   swapMap(materials[1], loadPhoto("windows_lit.jpg", { repeat: [1.5, 1.5] }));
   swapMap(materials[2], loadPhoto("windows_lit.jpg", { repeat: [0.75, 0.75] }));
+  swapMap(materials[3], loadPhoto("windows_lit2.jpg", { repeat: [1.25, 1.25] }));
   let seed = 1234567;
   const srand = () => {
     seed = (seed * 1664525 + 1013904223) >>> 0;
@@ -411,10 +434,7 @@ function addStorefront(world, side, z, width) {
 
   const awning = new THREE.Mesh(
     new THREE.BoxGeometry(1.2, 0.1, width * 0.72),
-    new THREE.MeshStandardMaterial({
-      color: choice([0x642a26, 0x3e5645, 0x5d5035, 0x343e56]),
-      roughness: 0.92,
-    })
+    world.materials.awning
   );
   awning.position.set(side * (STREET_FACE - 0.58), 3.02, z);
   world.scene.add(awning);
