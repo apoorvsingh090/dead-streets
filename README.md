@@ -61,6 +61,7 @@ Click **Enter the Street** to begin. Mouse capture is required for aiming. The g
 - Canvas-generated textures for signs, facades, blood, fire, and glow effects
 - [Blender](https://www.blender.org/) 5.x for authoring the weapon viewmodel assets (`tools/make_rifle.py`, `tools/make_shotgun.py`, `tools/make_pistol.py`), exported to glTF via `public/models/`
 - The animated zombie uses **"Male City Zombie" by Rikindle3D** (CC0) from OpenGameArt, retargeted onto its Mixamo skeleton with in-place walk/attack/death clips and loaded as `zombie.glb` (`tools/make_zombie.py`)
+- Rook and Mara use **Quaternius Ultimate Animated Character Pack** (CC0) `Soldier_Male` / `Soldier_Female` loaded as `ally_rook.glb` / `ally_mara.glb` (procedural fallback when unavailable), mirrored via Cinevva CDN; world gun props from the Quaternius Zombie Apocalypse / Toon Shooter kits (`gun_rifle_q.glb`, `gun_shotgun_q.glb`, `gun_pistol_q.glb`)
 
 ```bash
 npm run build

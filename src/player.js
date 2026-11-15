@@ -111,12 +111,23 @@ export class Player {
   }
 
   setTrigger(down) {
-    this.triggerDown = down;
-    if (down) this.tryFire();
+    if (!down) {
+      this.triggerDown = false;
+      return;
+    }
+    if (this.downed || this.reloading || this.game.state !== "playing" || this.fireCooldown > 0) {
+      this.triggerDown = false;
+      return;
+    }
+    this.triggerDown = true;
+    this.tryFire();
   }
 
   tryFire() {
-    if (this.downed || this.reloading || this.game.state !== "playing") return;
+    if (this.downed || this.reloading || this.game.state !== "playing") {
+      this.triggerDown = false;
+      return;
+    }
     if (this.fireCooldown > 0) return;
 
     const weapon = this.weapon;
@@ -149,6 +160,8 @@ export class Player {
       (this.sprinting ? 0.014 : 0);
 
     let anyHit = false;
+    let anyHeadshot = false;
+    let anyKill = false;
     for (let i = 0; i < weapon.pellets; i += 1) {
       const angle = Math.random() * Math.PI * 2;
       const radius = Math.sqrt(Math.random()) * spread;
@@ -163,12 +176,22 @@ export class Player {
         weapon,
         muzzle,
         this,
-        i === 0
+        true
       );
-      if (result && result.hitZombie) anyHit = true;
+      if (result && result.hitZombie) {
+        anyHit = true;
+        if (result.headshot) anyHeadshot = true;
+        if (result.killed) anyKill = true;
+      }
     }
 
-    if (anyHit) this.game.stats.shotsHit += 1;
+    if (anyHit) {
+      this.game.stats.shotsHit += 1;
+      if (weapon.pellets > 1) {
+        this.game.hud.showHitmarker(anyHeadshot, anyKill);
+        this.game.audio.hit(anyHeadshot);
+      }
+    }
 
     this.view.fire();
     this.game.audio.shot(weapon.sound);
@@ -243,11 +266,13 @@ export class Player {
 
   throwPipeBomb() {
     if (this.downed || this.pipebombs <= 0) return;
-    this.pipebombs -= 1;
+    if (this.game.state !== "playing") return;
     const direction = new THREE.Vector3();
     this.camera.getWorldDirection(direction);
     const origin = this.camera.position.clone().addScaledVector(direction, 0.45);
-    this.game.throwPipeBomb(origin, direction);
+    const thrown = this.game.throwPipeBomb(origin, direction);
+    if (!thrown) return;
+    this.pipebombs -= 1;
     this.view.shove();
     this.game.audio.shove();
   }
@@ -428,7 +453,8 @@ export class Player {
     this.bleedout -= dt;
     this.health = 0;
     this.sprinting = false;
-    this.reloading = false;
+    this.cancelReload();
+    this.triggerDown = false;
     this.adsProgress = damp(this.adsProgress, 0, 8, dt);
     this.game.hud.setDowned(true, Math.max(0, this.bleedout));
 
@@ -490,7 +516,7 @@ export class Player {
     this.health = 0;
     this.bleedout = 26;
     this.triggerDown = false;
-    this.reloading = false;
+    this.cancelReload();
     this.adsProgress = 0;
     this.velocityX = 0;
     this.velocityZ = 0;
@@ -507,6 +533,9 @@ export class Player {
     this.downed = false;
     this.health = health;
     this.bleedout = 0;
+    this.triggerDown = false;
+    this.fireCooldown = 0;
+    this.cancelReload();
     this.lastDamageTime = this.time;
     this.game.hud.setDowned(false, 0);
     this.game.hud.flashDamage(-0.5);

@@ -841,8 +841,9 @@ export class Soundscape {
     gain.gain.exponentialRampToValueAtTime(0.0001, when + duration);
 
     let tail = oscillator;
+    let filterNode = null;
     if (filterFrequency) {
-      const filterNode = this.context.createBiquadFilter();
+      filterNode = this.context.createBiquadFilter();
       filterNode.type = "lowpass";
       filterNode.frequency.value = filterFrequency;
       oscillator.connect(filterNode);
@@ -862,6 +863,7 @@ export class Soundscape {
     oscillator.stop(when + duration + 0.04);
     oscillator.onended = () => {
       oscillator.disconnect();
+      if (filterNode) filterNode.disconnect();
       gain.disconnect();
       if (panner) panner.disconnect();
     };

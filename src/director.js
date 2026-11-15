@@ -40,6 +40,7 @@ export class Director {
     this.finaleSpecialClock = 22;
     this.finaleElapsed = 0;
     this.bruteSpawned = false;
+    this.bruteRetryClock = 0;
     this.finaleStarted = false;
     this.lastTimerSecond = -1;
     this.threatUpdateClock = 0;
@@ -363,19 +364,24 @@ export class Director {
     }
 
     if (!this.bruteSpawned && this.finaleElapsed >= 48) {
-      this.bruteSpawned = true;
-      const spawn = this.game.world.getSpawnPoint(player.position, 24, 32);
-      const brute = this.game.zombies.spawn("brute", spawn, { waveId: "finale" });
-      if (brute) {
-        this.game.hud.announce(
-          "SPECIAL INFECTED",
-          "BRUTE",
-          "It's built like a wall. Bring it down.",
-          true,
-          3
-        );
-        this.game.audio.specialAlert();
-        this.game.hud.subtitle("MARA", "That's a big one. Hit the head!", 3);
+      this.bruteRetryClock -= dt;
+      if (this.bruteRetryClock <= 0) {
+        const spawn = this.game.world.getSpawnPoint(player.position, 24, 32, 0.65);
+        const brute = this.game.zombies.spawn("brute", spawn, { waveId: "finale" });
+        if (brute) {
+          this.bruteSpawned = true;
+          this.game.hud.announce(
+            "SPECIAL INFECTED",
+            "BRUTE",
+            "It's built like a wall. Bring it down.",
+            true,
+            3
+          );
+          this.game.audio.specialAlert();
+          this.game.hud.subtitle("MARA", "That's a big one. Hit the head!", 3);
+        } else {
+          this.bruteRetryClock = 6;
+        }
       }
     }
 

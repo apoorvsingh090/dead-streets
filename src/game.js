@@ -618,7 +618,7 @@ export class Game {
   }
 
   throwPipeBomb(origin, direction) {
-    this.combat.throwPipeBomb(origin, direction);
+    return this.combat.throwPipeBomb(origin, direction);
   }
 
   onZombieKilled(zombie, headshot = false, killer = null) {
@@ -716,6 +716,21 @@ export class Game {
       return;
     }
 
+    const point = this.world.getNearbyInteractable(this.player.position, 2.8);
+    const generatorReady = point?.type === "generator" && this.director.state === "generator";
+    if (generatorReady) {
+      this.currentInteraction = { type: point.type, point };
+      if (this.interactPressed) {
+        this.director.startFinale();
+        this.interactPressed = false;
+        this.currentInteraction = null;
+        this.hud.setInteraction("", false, 0);
+        return;
+      }
+      this.hud.setInteraction("START THE GENERATOR", true, 0);
+      return;
+    }
+
     const downedBot = this.survivors.getNearbyDowned(this.player.position, 2.25);
     if (downedBot) {
       this.currentInteraction = { type: "revive", bot: downedBot };
@@ -736,10 +751,9 @@ export class Game {
       return;
     }
 
-    const point = this.world.getNearbyInteractable(this.player.position, 2.8);
     if (point) {
       this.currentInteraction = { type: point.type, point };
-      const label = point.type === "generator" ? "START THE GENERATOR" : "TAKE SUPPLIES";
+      const label = point.type === "generator" ? "RESTORE POWER AFTER MARKET" : "TAKE SUPPLIES";
 
       if (this.interactPressed) {
         if (point.type === "supply") {
@@ -748,13 +762,16 @@ export class Game {
           this.survivors.healAll(22);
           this.hud.addKillfeed("SUPPLIES TAKEN", false);
           this.audio.pickup();
-        } else if (point.type === "generator" && this.director.state === "generator") {
-          this.director.startFinale();
+          this.interactPressed = false;
+          this.currentInteraction = null;
+          this.hud.setInteraction("", false, 0);
+          return;
         }
-        this.interactPressed = false;
-        this.currentInteraction = null;
-        this.hud.setInteraction("", false, 0);
-        return;
+        // Generator not ready yet: keep prompt, don't consume the press.
+        if (point.type === "generator") {
+          this.hud.setInteraction(label, true, 0);
+          return;
+        }
       }
 
       this.hud.setInteraction(label, true, 0);

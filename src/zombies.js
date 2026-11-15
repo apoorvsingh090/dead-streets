@@ -207,7 +207,9 @@ export class ZombieManager {
   removeZombie(zombie) {
     if (!zombie) return;
     if (zombie.root.parent) this.scene.remove(zombie.root);
-    if (zombie.shadow) zombie.shadow.material.dispose();
+    if (zombie.shadow && zombie.shadow.material !== this.shared.shadowMaterialCache) {
+      zombie.shadow.material.dispose();
+    }
     this.unregisterHitMeshes(zombie);
     const index = this.zombies.indexOf(zombie);
     if (index >= 0) this.zombies.splice(index, 1);
@@ -451,7 +453,16 @@ export class ZombieManager {
       const dx = zombie.position.x - position.x;
       const dz = zombie.position.z - position.z;
       const distance = Math.hypot(dx, dz);
-      if (distance > radius || distance < 0.001) continue;
+      if (distance > radius) continue;
+      if (distance < 0.001) {
+        zombie.shove(direction, strength);
+        this.game.effects.impact(
+          new THREE.Vector3(zombie.position.x, 1.2, zombie.position.z),
+          new THREE.Vector3(0, 1, 0.3),
+          "flesh"
+        );
+        continue;
+      }
       const dot = (dx / distance) * direction.x + (dz / distance) * direction.z;
       if (dot < 0.25) continue;
       zombie.shove(direction, strength * (1 - (distance / radius) * 0.35));

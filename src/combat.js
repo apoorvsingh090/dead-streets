@@ -49,8 +49,8 @@ export class CombatSystem {
       });
       killed = result.killed;
       this.game.effects.blood(hitPoint, direction, headshot);
-      this.game.hud.showHitmarker(headshot, killed);
-      if (weapon.pellets === 1 || drawTracer) {
+      if (weapon.pellets === 1) {
+        this.game.hud.showHitmarker(headshot, killed);
         this.game.audio.hit(headshot);
       }
     } else if (environmentHit) {
@@ -127,7 +127,7 @@ export class CombatSystem {
   }
 
   throwPipeBomb(origin, direction) {
-    if (this.game.state !== "playing") return;
+    if (this.game.state !== "playing") return false;
     const group = new THREE.Group();
     const body = new THREE.Mesh(this.sharedBombGeometry, this.bombMaterial);
     group.add(body);
@@ -167,6 +167,7 @@ export class CombatSystem {
     });
 
     this.game.hud.addKillfeed("PIPE BOMB OUT", false);
+    return true;
   }
 
   update(dt) {

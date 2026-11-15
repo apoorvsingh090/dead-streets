@@ -1,5 +1,31 @@
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { clamp, damp, rand, dampAngle, choice } from "./utils.js";
+
+// CC0 animated allies (Quaternius Ultimate Animated Character Pack,
+// mirrored via Cinevva CDN; see README credits). Loaded async; bots fall
+// back to the procedural model until the GLB arrives (or if it fails).
+const ALLY_ASSETS = {
+  rook: { file: "ally_rook.glb", scene: null, clips: [], state: "loading" },
+  mara: { file: "ally_mara.glb", scene: null, clips: [], state: "loading" },
+};
+
+const allyLoader = new GLTFLoader();
+for (const [id, asset] of Object.entries(ALLY_ASSETS)) {
+  allyLoader.load(
+    `${import.meta.env?.BASE_URL ?? "/"}models/${asset.file}`,
+    (gltf) => {
+      asset.scene = gltf.scene;
+      asset.clips = gltf.animations ?? [];
+      asset.state = "ready";
+    },
+    undefined,
+    () => {
+      asset.state = "failed";
+    }
+  );
+}
 
 const SURVIVOR_CONFIG = [
   {
@@ -49,28 +75,37 @@ function createBotModel(shared, config) {
   const gunMetal = new THREE.MeshStandardMaterial({ color: 0x232728, roughness: 0.42, metalness: 0.74 });
 
   const torso = new THREE.Mesh(shared.torsoGeometry, jacket);
-  torso.position.y = 1.18;
-  torso.scale.set(0.92, 0.96, 0.94);
+  torso.position.y = 1.22;
+  torso.scale.set(0.86, 1.0, 0.82);
   bodyGroup.add(torso);
 
-  const vest = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.5, 0.08), accent);
-  vest.position.set(0, 1.21, 0.185);
+  const vest = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.52, 0.1), accent);
+  vest.position.set(0, 1.24, 0.16);
   bodyGroup.add(vest);
+  // Vest straps so it reads as gear, not a floating plate.
+  const strapGeo = new THREE.BoxGeometry(0.09, 0.5, 0.11);
+  for (const side of [-1, 1]) {
+    const strap = new THREE.Mesh(strapGeo, shirt);
+    strap.position.set(side * 0.16, 1.24, 0.155);
+    bodyGroup.add(strap);
+  }
 
   const neck = new THREE.Mesh(shared.neckGeometry, skin);
-  neck.position.y = 1.58;
+  neck.position.y = 1.66;
+  neck.scale.set(0.9, 0.8, 0.9);
   bodyGroup.add(neck);
 
   const headGroup = new THREE.Group();
-  headGroup.position.set(0, 1.73, 0.01);
+  headGroup.position.set(0, 1.82, 0.02);
   bodyGroup.add(headGroup);
   const head = new THREE.Mesh(shared.headGeometry, skin);
-  head.scale.setScalar(0.93);
+  // Narrower skull reads human under the low-poly shading.
+  head.scale.set(0.8, 0.92, 0.84);
   headGroup.add(head);
 
   const hairMesh = new THREE.Mesh(shared.hairGeometry, hair);
-  hairMesh.position.y = 0.055;
-  hairMesh.scale.set(0.96, 0.52, 0.96);
+  hairMesh.position.y = 0.06;
+  hairMesh.scale.set(0.86, 0.5, 0.88);
   headGroup.add(hairMesh);
 
   if (config.id === "rook") {
@@ -97,38 +132,43 @@ function createBotModel(shared, config) {
   const armPivots = [];
   for (const side of [-1, 1]) {
     const pivot = new THREE.Group();
-    pivot.position.set(side * 0.36, 1.44, 0);
+    pivot.position.set(side * 0.33, 1.52, 0);
     bodyGroup.add(pivot);
     const arm = new THREE.Mesh(shared.armGeometry, jacket);
-    arm.position.y = -0.32;
+    arm.position.y = -0.3;
+    arm.scale.set(0.9, 0.95, 0.9);
     pivot.add(arm);
+    // Hands meet in front of the chest where the gun sits.
     const hand = new THREE.Mesh(shared.handGeometry, skin);
-    hand.position.set(0, -0.84, 0.01);
+    hand.position.set(-side * 0.07, -0.62, 0.16);
+    hand.scale.setScalar(0.9);
     pivot.add(hand);
     armPivots.push(pivot);
-    pivot.rotation.x = -1.0;
-    pivot.rotation.z = side * -0.06;
+    // Low-ready carry, slight asymmetry so they don't mirror like mannequins.
+    pivot.rotation.x = side < 0 ? -0.72 : -0.62;
+    pivot.rotation.z = side * -0.12;
   }
 
   const legPivots = [];
   for (const side of [-1, 1]) {
     const pivot = new THREE.Group();
-    pivot.position.set(side * 0.18, 0.85, 0);
+    pivot.position.set(side * 0.16, 0.92, 0);
     bodyGroup.add(pivot);
     const leg = new THREE.Mesh(shared.legGeometry, pants);
-    leg.position.y = -0.4;
+    leg.position.y = -0.44;
+    leg.scale.set(0.88, 1.05, 0.88);
     pivot.add(leg);
     const foot = new THREE.Mesh(shared.footGeometry, boot);
-    foot.position.set(0, -0.8, 0.08);
+    foot.position.set(0, -0.88, 0.1);
     pivot.add(foot);
     legPivots.push(pivot);
   }
 
   const backpack = new THREE.Mesh(
-    new THREE.BoxGeometry(0.44, 0.58, 0.22),
+    new THREE.BoxGeometry(0.38, 0.5, 0.18),
     new THREE.MeshStandardMaterial({ color: 0x2a2923, roughness: 0.97 })
   );
-  backpack.position.set(0, 1.22, -0.28);
+  backpack.position.set(0, 1.26, -0.24);
   bodyGroup.add(backpack);
 
   const gun = new THREE.Group();
@@ -143,18 +183,21 @@ function createBotModel(shared, config) {
     new THREE.CylinderGeometry(0.026, 0.026, config.weapon === "shotgun" ? 0.75 : 0.58, 8),
     gunMetal
   );
+  // Character forward is +Z (face, stain and eyes all sit at +Z), so the
+  // barrel must point +Z, not into the carrier's own chest.
   barrel.rotation.x = Math.PI / 2;
-  barrel.position.set(0, 0.04, -0.52);
+  barrel.position.set(0, 0.04, 0.52);
   gun.add(barrel);
   const stock = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.12, 0.3), gunMetal);
-  stock.position.set(0, -0.02, 0.34);
+  stock.position.set(0, -0.02, -0.3);
   gun.add(stock);
-  gun.position.set(0.16, 1.23, 0.28);
-  gun.rotation.x = -0.02;
+  // Tucked into the chest between both hands.
+  gun.position.set(0.1, 1.28, 0.32);
+  gun.rotation.x = 0.02;
   bodyGroup.add(gun);
 
   const muzzle = new THREE.Object3D();
-  muzzle.position.set(0, 0.04, -0.92);
+  muzzle.position.set(0, 0.04, 0.92);
   gun.add(muzzle);
 
   const flash = new THREE.Sprite(
@@ -231,11 +274,122 @@ class SurvivorBot {
 
     const shared = game.zombies.shared;
     shared.flashTexture = shared.flashTexture || createAllyFlashTexture(game);
+    this.shared = shared;
+    this.skinned = null;
     this.model = createBotModel(shared, config);
     this.root = this.model.root;
     this.game.scene.add(this.root);
 
     this.setSpawn(index);
+    this.maybeUpgradeToSkinned();
+  }
+
+  maybeUpgradeToSkinned() {
+    if (this.skinned) return;
+    const asset = ALLY_ASSETS[this.id];
+    if (!asset || asset.state !== "ready" || !asset.scene) return;
+    try {
+      this.upgradeToSkinned(asset);
+    } catch (error) {
+      console.warn(`Ally ${this.id} skinned upgrade failed, keeping procedural:`, error);
+    }
+  }
+
+  upgradeToSkinned(asset) {
+    // Swap the procedural body for the CC0 skinned character. Keep the same
+    // root position/heading so the bot doesn't teleport.
+    this.game.scene.remove(this.root);
+    const root = new THREE.Group();
+    root.name = `ally-${this.id}`;
+    const bodyGroup = new THREE.Group();
+    root.add(bodyGroup);
+
+    const clone = cloneSkinned(asset.scene);
+    // Quaternius soldiers are ~1.84m tall; our eye/hearing heights assume ~1.8m.
+    clone.scale.setScalar(0.98);
+    bodyGroup.add(clone);
+
+    const mixer = new THREE.AnimationMixer(clone);
+    const actions = {};
+    for (const clip of asset.clips) {
+      actions[clip.name] = mixer.clipAction(clip);
+    }
+    const play = (name, force = false) => {
+      const next = actions[name];
+      if (!next) return;
+      if (this.skinned.current === next && !force) return;
+      if (this.skinned.current) this.skinned.current.fadeOut(0.22);
+      next.reset().fadeIn(0.22).play();
+      this.skinned.current = next;
+      this.skinned.currentName = name;
+    };
+
+    // Strap a simple gun into the right fist so tracers/muzzle match the hands.
+    const gunMetal = new THREE.MeshStandardMaterial({ color: 0x232728, roughness: 0.42, metalness: 0.74 });
+    const gun = new THREE.Group();
+    const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.12, 0.5), gunMetal);
+    gun.add(gunBody);
+    const gunBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.42, 8), gunMetal);
+    gunBarrel.rotation.x = Math.PI / 2;
+    gunBarrel.position.set(0, 0.03, 0.42);
+    gun.add(gunBarrel);
+    const muzzle = new THREE.Object3D();
+    muzzle.position.set(0, 0.03, 0.68);
+    gun.add(muzzle);
+    const fist = clone.getObjectByName("FistR");
+    if (fist) {
+      gun.position.set(0, -0.02, 0.12);
+      fist.add(gun);
+    } else {
+      gun.position.set(0.22, 1.3, 0.4);
+      bodyGroup.add(gun);
+    }
+    const flash = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: this.shared.flashTexture,
+        color: 0xffd38a,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      })
+    );
+    flash.scale.setScalar(0.3);
+    flash.position.copy(muzzle.position);
+    flash.visible = false;
+    gun.add(flash);
+
+    const shadow = new THREE.Mesh(
+      this.shared.shadowGeometry,
+      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32, depthWrite: false })
+    );
+    shadow.rotation.x = -Math.PI / 2;
+    shadow.position.y = 0.022;
+    shadow.scale.set(1.1, 1.2, 1);
+    root.add(shadow);
+
+    root.position.copy(this.position);
+    root.rotation.y = this.heading;
+    this.game.scene.add(root);
+
+    this.root = root;
+    this.model = {
+      root,
+      bodyGroup,
+      headGroup: clone.getObjectByName("Head") ?? new THREE.Group(),
+      armPivots: [],
+      legPivots: [],
+      gun,
+      muzzle,
+      flash,
+      shadow,
+      backpack: null,
+      downedRotation: 0,
+    };
+    this.skinned = { mixer, actions, play, current: null, currentName: "", deathPlayed: false };
+    play(this.downed || !this.alive ? "Death" : "Idle", true);
+    if (!this.alive || this.downed) {
+      this.model.gun.visible = false;
+    }
   }
 
   setSpawn(index) {
@@ -262,6 +416,7 @@ class SurvivorBot {
   }
 
   update(dt) {
+    this.maybeUpgradeToSkinned();
     if (!this.alive) {
       this.updateDead(dt);
       return;
@@ -403,6 +558,32 @@ class SurvivorBot {
     this.model.gun.visible = false;
     this.root.position.copy(this.position);
 
+    if (this.skinned) {
+      if (!this.skinned.deathPlayed) {
+        this.skinned.deathPlayed = true;
+        const death = this.skinned.actions.Death;
+        if (death) {
+          if (this.skinned.current) this.skinned.current.fadeOut(0.2);
+          death.reset().setLoop(THREE.LoopOnce, 1);
+          death.clampWhenFinished = true;
+          death.fadeIn(0.25).play();
+          this.skinned.current = death;
+          this.skinned.currentName = "Death";
+        }
+      }
+      this.skinned.mixer.update(dt);
+      if (this.bleedout <= 0) {
+        this.die();
+      }
+      return;
+    }
+
+    this.model.bodyGroup.rotation.z = damp(this.model.bodyGroup.rotation.z, -1.15, 8, dt);
+    this.model.bodyGroup.rotation.x = damp(this.model.bodyGroup.rotation.x, 0.16, 8, dt);
+    this.model.bodyGroup.position.y = damp(this.model.bodyGroup.position.y, 0.36, 8, dt);
+    this.model.gun.visible = false;
+    this.root.position.copy(this.position);
+
     if (this.bleedout <= 0) {
       this.die();
     }
@@ -467,16 +648,40 @@ class SurvivorBot {
   }
 
   animate(dt, speed) {
+    if (this.skinned) {
+      this.skinned.mixer.update(dt);
+      const loco = speed < 0.5 ? "Idle" : speed < 4 ? "Walk_Carry" : "Run_Carry";
+      this.skinned.play(loco);
+      const action = this.skinned.actions[loco];
+      if (action && speed >= 0.5) {
+        const base = loco === "Run_Carry" ? 5.2 : 2.1;
+        action.timeScale = clamp(speed / base, 0.7, 1.5);
+      }
+      this.root.position.copy(this.position);
+      return;
+    }
     this.walkPhase += dt * (2.3 + clamp(speed, 0, 8) * 1.15);
     const swing = Math.sin(this.walkPhase);
+    const swing2 = Math.sin(this.walkPhase + 0.5);
     const moving = clamp(speed / 5, 0, 1);
-    this.model.legPivots[0].rotation.x = swing * 0.58 * moving;
-    this.model.legPivots[1].rotation.x = -swing * 0.58 * moving;
-    this.model.armPivots[0].rotation.x = -1.02 + swing * 0.15 * moving;
-    this.model.armPivots[1].rotation.x = -1.02 - swing * 0.15 * moving;
-    this.model.bodyGroup.position.y = Math.abs(Math.cos(this.walkPhase)) * 0.02 * moving;
-    this.model.bodyGroup.rotation.z = Math.sin(this.walkPhase * 0.5) * 0.015 * moving;
-    this.model.headGroup.rotation.z = Math.sin(this.walkPhase * 0.35) * 0.04;
+    const idle = 1 - moving;
+    // Legs stride, idle settles straight.
+    this.model.legPivots[0].rotation.x = swing * 0.55 * moving;
+    this.model.legPivots[1].rotation.x = -swing2 * 0.55 * moving;
+    // Arms carry low-ready: gentle counter-swing while walking, breathing sway idle.
+    const breathe = Math.sin(this.walkPhase * 0.45) * 0.02;
+    this.model.armPivots[0].rotation.x = -0.72 + swing * 0.22 * moving + breathe * idle;
+    this.model.armPivots[1].rotation.x = -0.62 - swing2 * 0.22 * moving - breathe * idle;
+    this.model.armPivots[0].rotation.z = -0.12 - moving * 0.02;
+    this.model.armPivots[1].rotation.z = 0.12 + moving * 0.02;
+    this.model.bodyGroup.position.y =
+      Math.abs(Math.cos(this.walkPhase)) * 0.028 * moving + Math.sin(this.walkPhase * 0.45) * 0.006 * idle;
+    this.model.bodyGroup.rotation.z = Math.sin(this.walkPhase * 0.5) * 0.02 * moving;
+    // Torso leans into the run, gun bobs with the stride.
+    this.model.bodyGroup.rotation.x = moving * 0.05;
+    this.model.gun.position.y = 1.28 + Math.abs(Math.sin(this.walkPhase)) * 0.012 * moving;
+    this.model.headGroup.rotation.z = Math.sin(this.walkPhase * 0.35) * 0.035;
+    this.model.headGroup.rotation.x = moving * 0.04;
     this.root.position.copy(this.position);
   }
 
@@ -492,6 +697,12 @@ class SurvivorBot {
   updateDead(dt) {
     this.deadTime += dt;
     this.model.gun.visible = false;
+    if (this.skinned) {
+      // Death clip already playing from downed; keep settling it.
+      this.skinned.mixer.update(dt);
+      this.root.position.copy(this.position);
+      return;
+    }
     this.model.bodyGroup.rotation.z = damp(this.model.bodyGroup.rotation.z, -1.4, 3, dt);
     this.model.bodyGroup.position.y = damp(this.model.bodyGroup.position.y, 0.28, 3, dt);
     this.root.position.copy(this.position);
@@ -520,7 +731,11 @@ class SurvivorBot {
     this.velocityX = 0;
     this.velocityZ = 0;
     this.model.gun.visible = false;
-    this.model.bodyGroup.rotation.z = 0;
+    if (this.skinned) {
+      this.skinned.deathPlayed = false;
+    } else {
+      this.model.bodyGroup.rotation.z = 0;
+    }
     this.game.onBotDowned(this);
   }
 
@@ -528,6 +743,21 @@ class SurvivorBot {
     if (!this.alive) return;
     this.alive = false;
     this.downed = false;
+    if (this.skinned) {
+      this.model.gun.visible = false;
+      if (!this.skinned.deathPlayed) {
+        this.skinned.deathPlayed = true;
+        const death = this.skinned.actions.Death;
+        if (death) {
+          if (this.skinned.current) this.skinned.current.fadeOut(0.2);
+          death.reset().setLoop(THREE.LoopOnce, 1);
+          death.clampWhenFinished = true;
+          death.fadeIn(0.25).play();
+          this.skinned.current = death;
+          this.skinned.currentName = "Death";
+        }
+      }
+    }
     this.game.onBotDied(this);
   }
 
@@ -539,9 +769,14 @@ class SurvivorBot {
     this.reviveTimer = 0;
     this.reviveCallout = false;
     this.model.gun.visible = true;
-    this.model.bodyGroup.rotation.z = 0;
-    this.model.bodyGroup.rotation.x = 0;
-    this.model.bodyGroup.position.y = 0;
+    if (this.skinned) {
+      this.skinned.deathPlayed = false;
+      this.skinned.play("Idle", true);
+    } else {
+      this.model.bodyGroup.rotation.z = 0;
+      this.model.bodyGroup.rotation.x = 0;
+      this.model.bodyGroup.position.y = 0;
+    }
     this.game.hud.subtitle(this.name, "I'm up. Let's move.", 2.6);
   }
 }

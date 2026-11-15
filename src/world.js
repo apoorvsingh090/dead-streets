@@ -250,7 +250,7 @@ export class World {
     return raycaster.intersectObjects(this.shootables, false);
   }
 
-  getSpawnPoint(playerPosition, minDistance = 16, maxDistance = 34) {
+  getSpawnPoint(playerPosition, minDistance = 16, maxDistance = 34, radius = 0.5) {
     let minZ = this.bounds.minZ + 1.2;
     let maxZ = this.bounds.maxZ - 1.2;
 
@@ -273,7 +273,7 @@ export class World {
       } else {
         x = rand(-9.4, 9.4);
       }
-      if (!this.collidesCircle(x, z, 0.5)) {
+      if (!this.collidesCircle(x, z, radius)) {
         return new THREE.Vector3(x, 0, z);
       }
     }
@@ -281,12 +281,18 @@ export class World {
     for (let attempt = 0; attempt < 20; attempt += 1) {
       const x = rand(-9.4, 9.4);
       const z = rand(minZ, maxZ);
-      if (!this.collidesCircle(x, z, 0.5)) {
+      if (!this.collidesCircle(x, z, radius)) {
         return new THREE.Vector3(x, 0, z);
       }
     }
 
-    return new THREE.Vector3(0, 0, clamp(playerPosition.z - 18, minZ, maxZ));
+    const fallbackZ = clamp(playerPosition.z - 18, minZ, maxZ);
+    for (const x of [0, 3, -3, 6, -6, 8.5, -8.5]) {
+      if (!this.collidesCircle(x, fallbackZ, radius)) {
+        return new THREE.Vector3(x, 0, fallbackZ);
+      }
+    }
+    return new THREE.Vector3(playerPosition.x, 0, clamp(playerPosition.z - 8, minZ, maxZ));
   }
 
   getNearbyInteractable(position, maxDistance = 2.8) {

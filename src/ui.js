@@ -158,37 +158,37 @@ export class HUD {
 
     if (this.cache.health !== health) {
       this.cache.health = health;
-      this.healthValue.textContent = String(health);
+      if (this.healthValue) this.healthValue.textContent = String(health);
     }
     if (this.cache.healthPercent !== healthPercent) {
       this.cache.healthPercent = healthPercent;
-      this.healthFill.style.width = `${healthPercent}%`;
+      if (this.healthFill) this.healthFill.style.width = `${healthPercent}%`;
     }
 
-    this.healthPanel.classList.toggle("is-hurt", healthPercent <= 60 && healthPercent > 30);
-    this.healthPanel.classList.toggle("is-critical", healthPercent <= 30);
+    this.healthPanel?.classList.toggle("is-hurt", healthPercent <= 60 && healthPercent > 30);
+    this.healthPanel?.classList.toggle("is-critical", healthPercent <= 30);
     this.lowHealth?.classList.toggle("active", player.health <= 34 && !player.downed);
 
     if (this.cache.medkits !== player.medkits) {
       this.cache.medkits = player.medkits;
-      this.medkitCount.textContent = String(player.medkits);
+      if (this.medkitCount) this.medkitCount.textContent = String(player.medkits);
     }
     if (this.cache.pipebombs !== player.pipebombs) {
       this.cache.pipebombs = player.pipebombs;
-      this.pipeCount.textContent = String(player.pipebombs);
+      if (this.pipeCount) this.pipeCount.textContent = String(player.pipebombs);
     }
 
     const downed = player.downed;
     if (this.cache.downed !== downed) {
       this.cache.downed = downed;
-      this.downedStatus.classList.toggle("hidden", !downed);
+      this.downedStatus?.classList.toggle("hidden", !downed);
       this.crosshair?.classList.toggle("is-hidden", downed);
     }
     if (downed) {
       const seconds = Math.max(0, Math.ceil(player.bleedout));
       if (this.cache.bleedout !== seconds) {
         this.cache.bleedout = seconds;
-        this.bleedoutTimer.textContent = String(seconds);
+        if (this.bleedoutTimer) this.bleedoutTimer.textContent = String(seconds);
       }
     }
   }
@@ -200,27 +200,30 @@ export class HUD {
 
     if (this.cache.weaponId !== weapon.id) {
       this.cache.weaponId = weapon.id;
-      this.weaponName.textContent = weapon.name;
-      this.fireMode.textContent =
-        weapon.sound === "shotgun" ? "PUMP" : weapon.auto ? "AUTO" : "SEMI";
+      if (this.weaponName) this.weaponName.textContent = weapon.name;
+      if (this.fireMode)
+        this.fireMode.textContent =
+          weapon.sound === "shotgun" ? "PUMP" : weapon.auto ? "AUTO" : "SEMI";
     }
 
     if (this.cache.ammoMag !== ammo.mag) {
       this.cache.ammoMag = ammo.mag;
-      this.ammoMag.textContent = String(ammo.mag);
+      if (this.ammoMag) this.ammoMag.textContent = String(ammo.mag);
     }
 
     const reserveText = ammo.reserve === Infinity ? "∞" : String(ammo.reserve);
     if (this.cache.ammoReserve !== reserveText) {
       this.cache.ammoReserve = reserveText;
-      this.ammoReserve.textContent = reserveText;
+      if (this.ammoReserve) this.ammoReserve.textContent = reserveText;
     }
 
     this.ammoRow?.classList.toggle("is-low", ammo.mag <= Math.max(2, Math.floor(weapon.magSize * 0.25)));
   }
 
   updateSquad(game) {
+    if (!this.squadRows) return;
     const player = game.player;
+    if (!player) return;
     const bots = game.survivors?.bots ?? [];
 
     const values = [

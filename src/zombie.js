@@ -123,6 +123,11 @@ export class Zombie {
     this.stuckTimer = 0;
     this.avoidTimer = 0;
     this.avoidSign = Math.random() < 0.5 ? -1 : 1;
+    this.smoothSpeed = 0;
+    this.sepX = 0;
+    this.sepZ = 0;
+    this.strafeSign = Math.random() < 0.5 ? -1 : 1;
+    this.strafeTimer = rand(1, 2.5);
     this.hitMeshes = [];
 
     this.buildModel();
@@ -228,7 +233,9 @@ export class Zombie {
     const action = this.actions[loco];
     if (action && loco !== LOCOMOTION.idle) {
       const base = this.type === "runner" ? 5.1 : 2.2;
-      action.timeScale = clamp(speed / base, 0.75, 1.65);
+      // Use actual smoothed speed so the clip slows when blocked instead of skating.
+      const animSpeed = this.smoothSpeed > 0.1 ? this.smoothSpeed : speed;
+      action.timeScale = clamp(animSpeed / base, 0.6, 1.65);
     }
   }
 
@@ -530,10 +537,21 @@ export class Zombie {
     }
 
     let desiredSpeed = this.speed;
+    let moveDirX = dirX;
+    let moveDirZ = dirZ;
 
     if (this.type === "spitter" && attackableTarget) {
       if (distance < 7.5) {
-        desiredSpeed = -this.speed * 0.7;
+        // Too close: sidestep to keep range instead of moonwalking backwards
+        // through the player. Pick a strafe direction and hold it briefly.
+        this.strafeTimer -= dt;
+        if (this.strafeTimer <= 0) {
+          this.strafeTimer = rand(1.2, 2.4);
+          this.strafeSign = Math.random() < 0.5 ? -1 : 1;
+        }
+        desiredSpeed = this.speed * 0.8;
+        moveDirX = -dirZ * this.strafeSign;
+        moveDirZ = dirX * this.strafeSign;
       } else if (distance < 21) {
         desiredSpeed = 0;
         if (
@@ -572,22 +590,26 @@ export class Zombie {
     let moveX = 0;
     let moveZ = 0;
     if (desiredSpeed !== 0 && distance > 0.001) {
-      moveX = dirX * desiredSpeed;
-      moveZ = dirZ * desiredSpeed;
+      moveX = moveDirX * desiredSpeed;
+      moveZ = moveDirZ * desiredSpeed;
     }
 
     // Reuse a scratch object owned by this instance (no allocation per frame).
+    // Damp separation so crowded hordes sway instead of vibrating.
     const separation = this.manager.getSeparation(this, this._separationScratch ??= { x: 0, z: 0 });
-    moveX += separation.x;
-    moveZ += separation.z;
+    this.sepX = damp(this.sepX, separation.x, 5, dt);
+    this.sepZ = damp(this.sepZ, separation.z, 5, dt);
+    moveX += this.sepX;
+    moveZ += this.sepZ;
 
     if (this.avoidTimer > 0) {
       const tangentX = -dirZ * this.avoidSign;
       const tangentZ = dirX * this.avoidSign;
-      moveX += tangentX * this.speed * 0.7;
-      moveZ += tangentZ * this.speed * 0.7;
+      moveX += tangentX * this.speed * 0.45;
+      moveZ += tangentZ * this.speed * 0.45;
     }
 
+    let moved = 0;
     const moveLength = Math.hypot(moveX, moveZ);
     if (moveLength > 0.01 && !inAttackRange) {
       const normalizer = Math.min(1, this.speed / moveLength);
@@ -597,23 +619,31 @@ export class Zombie {
       const beforeZ = this.position.z;
       this.manager.world.resolveMovement(this.position, stepX, stepZ, this.radius);
       this.applyKnockback(dt);
-      const moved = Math.hypot(this.position.x - beforeX, this.position.z - beforeZ);
+      moved = Math.hypot(this.position.x - beforeX, this.position.z - beforeZ);
       if (moved < Math.min(0.002, this.speed * dt * 0.2)) {
         this.stuckTimer += dt;
       } else {
         this.stuckTimer = Math.max(0, this.stuckTimer - dt * 2);
       }
-      if (this.stuckTimer > 0.35) {
-        this.avoidTimer = rand(0.35, 0.8);
+      if (this.stuckTimer > 0.55) {
+        this.avoidTimer = rand(0.6, 1.1);
         this.avoidSign = Math.random() < 0.5 ? -1 : 1;
         this.stuckTimer = 0;
       }
     } else {
       this.applyKnockback(dt);
+      moved = Math.hypot(this.knockbackX, this.knockbackZ) * dt;
     }
 
-    this.faceDirection(dirX, dirZ, dt);
-    const skinnedSpeed = desiredSpeed === 0 ? 0 : Math.hypot(this.knockbackX, this.knockbackZ) + Math.abs(desiredSpeed);
+    // Smooth actual ground speed; animation follows this, not the wish speed,
+    // so blocked zombies idle instead of skating in place.
+    const instantSpeed = dt > 0 ? moved / dt : 0;
+    this.smoothSpeed = damp(this.smoothSpeed, clamp(instantSpeed, 0, 7), 6, dt);
+
+    // Turn slower at speed so headings don't snap when circling the player.
+    const turnRate = clamp(7 - this.smoothSpeed * 0.55, 3.2, 7);
+    this.faceDirection(dirX, dirZ, dt, turnRate);
+    const skinnedSpeed = this.smoothSpeed + Math.hypot(this.knockbackX, this.knockbackZ) * 0.5;
     if (this.isProceduralModel) {
       this.animate(dt, skinnedSpeed);
     } else {
@@ -645,34 +675,43 @@ export class Zombie {
     this.knockbackZ = damp(this.knockbackZ, 0, 8, dt);
   }
 
-  faceDirection(dirX, dirZ, dt) {
+  faceDirection(dirX, dirZ, dt, rate = 7) {
     if (Math.abs(dirX) + Math.abs(dirZ) < 0.001) return;
     const desired = Math.atan2(dirX, dirZ);
-    this.heading = dampAngle(this.heading, desired, 7, dt);
+    this.heading = dampAngle(this.heading, desired, rate, dt);
     this.root.rotation.y = this.heading;
   }
 
   animate(dt, speed) {
     const scaleSpeed = clamp(speed / 3.2, 0, 2.2);
-    this.walkPhase += dt * (2.2 + scaleSpeed * 3.1);
+    const stride = this.type === "runner" ? 4.4 : 2.2 + scaleSpeed * 3.1;
+    this.walkPhase += dt * stride;
     const swing = Math.sin(this.walkPhase);
-    const bob = Math.abs(Math.cos(this.walkPhase)) * 0.025 * Math.min(1.2, scaleSpeed);
+    const swing2 = Math.sin(this.walkPhase + 0.6);
+    const moving = Math.min(1, scaleSpeed + 0.08);
+    const bob = Math.abs(Math.cos(this.walkPhase)) * 0.032 * Math.min(1.2, scaleSpeed);
+    const lean = clamp(speed * 0.035, 0, 0.16);
 
     this.bodyGroup.position.y = bob;
-    this.bodyGroup.rotation.z = Math.sin(this.walkPhase * 0.5) * 0.022 * Math.min(1, scaleSpeed);
-    this.bodyGroup.rotation.x = -this.flinch * 0.13 + this.attackAnim * 0.06;
+    this.bodyGroup.rotation.z = Math.sin(this.walkPhase * 0.5) * 0.03 * moving;
+    // Hunched forward when moving, recoil back on flinch, lunge on attack.
+    this.bodyGroup.rotation.x = lean - this.flinch * 0.13 + this.attackAnim * 0.1;
+    this.bodyGroup.rotation.y = Math.sin(this.walkPhase * 0.5) * 0.05 * moving;
 
-    this.legPivots[0].rotation.x = swing * 0.6 * Math.min(1, scaleSpeed);
-    this.legPivots[1].rotation.x = -swing * 0.6 * Math.min(1, scaleSpeed);
+    // Legs: asymmetric stride + slight knee bend so feet don't glide.
+    this.legPivots[0].rotation.x = swing * 0.62 * moving + lean * 0.4;
+    this.legPivots[1].rotation.x = -swing2 * 0.58 * moving + lean * 0.4;
 
     const attackSwing = Math.sin(this.attackAnim * Math.PI) * 0.9;
-    const armBase = this.type === "brute" ? -0.35 : -1.12;
+    const armBase = this.type === "brute" ? -0.35 : -1.02;
+    // Arms hang lower at rest, reach forward with stagger so left/right differ.
+    const restDroop = (1 - moving) * 0.55;
     this.armPivots[0].pivot.rotation.x =
-      armBase + swing * 0.12 - attackSwing * (this.type === "brute" ? 0.2 : 0.22);
+      armBase + restDroop + swing * 0.14 * moving - attackSwing * (this.type === "brute" ? 0.2 : 0.28);
     this.armPivots[1].pivot.rotation.x =
-      armBase - swing * 0.12 - attackSwing * (this.type === "brute" ? 0.2 : 0.22);
-    this.armPivots[0].pivot.rotation.z = -0.12 + this.attackAnim * 0.2;
-    this.armPivots[1].pivot.rotation.z = 0.12 - this.attackAnim * 0.2;
+      armBase + restDroop - swing2 * 0.14 * moving - attackSwing * (this.type === "brute" ? 0.2 : 0.22);
+    this.armPivots[0].pivot.rotation.z = -0.14 + this.attackAnim * 0.2 + Math.sin(this.walkPhase * 0.5) * 0.03;
+    this.armPivots[1].pivot.rotation.z = 0.14 - this.attackAnim * 0.2 - Math.sin(this.walkPhase * 0.5) * 0.03;
 
     this.headGroup.rotation.z = Math.sin(this.walkPhase * 0.55) * 0.07;
     this.headGroup.rotation.x = Math.sin(this.walkPhase * 0.36) * 0.035 - this.flinch * 0.05;
