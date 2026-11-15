@@ -67,7 +67,8 @@ function makeIcon(size) {
 }
 
 mkdirSync("public/icons", { recursive: true });
-for (const size of [192, 512]) {
+const sizes = process.argv.slice(2).map(Number).filter((n) => n > 0);
+for (const size of sizes.length > 0 ? sizes : [192, 512]) {
   writeFileSync(`public/icons/icon-${size}.png`, makeIcon(size));
   console.log(`wrote public/icons/icon-${size}.png`);
 }
