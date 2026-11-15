@@ -1,4 +1,4 @@
-# Dead Streets — QA playtest checklist
+# Dead Streets ï¿½ QA playtest checklist
 
 One full run takes ~8-12 minutes. Check each box in order; note failures with
 sector, difficulty, and what was on screen.
@@ -33,8 +33,9 @@ sector, difficulty, and what was on screen.
 - [ ] End screen stats + NEW BEST on record runs; menu best line updates.
 
 ## Pause / gamepad
-- [ ] Esc pauses (pointer unlock pauses too); sliders + quality + controls recap render.
-- [ ] Controller (if available): sticks move/look, RT/LT fire/ADS, Y revive, Start pause/resume.
+- [ ] Esc pauses (pointer unlock pauses too); sliders + quality + flash toggle + controls recap render.
+- [ ] Reduce-flash ON visibly dims damage flash, lightning, and explosion strobes.
+- [ ] Controller (if available): sticks move/look (diagonal full-tilt sprints), RT/LT fire/ADS, Y revive, Start pause/resume.
 - [ ] Mute (M / Back) silences; volume slider scales everything.
 
 ## Desktop build
