@@ -1894,6 +1894,12 @@ kbd {
   text-align: center;
 }
 
+.pause-controls {
+  margin-top: 18px;
+  padding: 14px 2px 0;
+  border-top: 1px solid rgba(232, 226, 213, 0.1);
+}
+
 .end-card {
   width: min(560px, calc(100vw - 48px));
 }
