@@ -1,0 +1,15 @@
+{
+  "name": "Dead Streets — Zombie Survival FPS",
+  "short_name": "Dead Streets",
+  "description": "A Left 4 Dead-inspired zombie survival FPS. Push through the block with two AI survivors and reach the shelter.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#080a0b",
+  "theme_color": "#080a0b",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
