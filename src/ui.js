@@ -1,9 +1,11 @@
 import { clamp, formatTime } from "./utils.js";
 
+const BASE_URL = import.meta.env?.BASE_URL ?? "/";
+
 const SQUAD_CONFIG = [
   { id: "player", name: "YOU", color: "#c7a56d", letter: "Y" },
-  { id: "rook", name: "ROOK", color: "#778a6a", letter: "R" },
-  { id: "mara", name: "MARA", color: "#925147", letter: "M" },
+  { id: "rook", name: "ROOK", color: "#778a6a", letter: "R", portrait: "portrait_rook.jpg" },
+  { id: "mara", name: "MARA", color: "#925147", letter: "M", portrait: "portrait_mara.jpg" },
 ];
 
 export class HUD {
@@ -77,8 +79,12 @@ export class HUD {
     for (const member of SQUAD_CONFIG) {
       const row = document.createElement("div");
       row.className = "squad-row";
+      const portraitUrl = member.portrait ? `${BASE_URL}images/${member.portrait}` : null;
+      const avatarStyle = portraitUrl
+        ? `--squad-color:${member.color}; background-image: url("${portraitUrl}")`
+        : `--squad-color:${member.color}`;
       row.innerHTML = `
-        <div class="squad-avatar" style="--squad-color:${member.color}">${member.letter}</div>
+        <div class="squad-avatar" style="${avatarStyle}">${member.letter}</div>
         <div class="squad-info">
           <div class="squad-topline">
             <span class="squad-name">${member.name}</span>
@@ -87,6 +93,12 @@ export class HUD {
           <div class="squad-bar"><span></span></div>
         </div>
       `;
+      if (portraitUrl) {
+        const avatar = row.querySelector(".squad-avatar");
+        const img = new Image();
+        img.onload = () => avatar?.classList.add("has-portrait");
+        img.src = portraitUrl;
+      }
       this.squadList.append(row);
       this.squadRows.set(member.id, {
         row,

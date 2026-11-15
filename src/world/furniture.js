@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { rand, randInt, choice, lerp } from "../utils.js";
+import { loadPhoto, swapMap } from "./photo.js";
 
 const CAR_COLORS = [0x28323a, 0x462c2b, 0x4e4c43, 0x303434, 0x3f3d43, 0x554d3b];
 const TRASH_COLORS = [0x171819, 0x202122, 0x292725, 0x111314];
@@ -106,6 +107,7 @@ function addCar(world, x, z, rotation, color, wrecked = false) {
     roughness: wrecked ? 0.92 : 0.42,
     metalness: wrecked ? 0.21 : 0.52,
   });
+  swapMap(bodyMaterial, loadPhoto("car_door.jpg", { repeat: [1, 1] }), color);
   const windowMaterial = new THREE.MeshStandardMaterial({
     color: wrecked ? 0x0b0e0f : 0x162126,
     roughness: 0.2,
@@ -184,6 +186,7 @@ function addBus(world, x, z) {
     roughness: 0.68,
     metalness: 0.34,
   });
+  swapMap(bodyMaterial, loadPhoto("bus_side.jpg", { repeat: [2, 1] }), 0x3f4b43);
   const body = new THREE.Mesh(new THREE.BoxGeometry(2.45, 2.65, 9.2), bodyMaterial);
   body.position.y = 1.55;
   bus.add(body);
@@ -341,6 +344,20 @@ function addAlleyFences(world) {
     roughness: 0.64,
     metalness: 0.55,
   });
+  // Chain-link infill: alphaTest cutout, no sort issues.
+  const linkMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8f9799,
+    roughness: 0.45,
+    metalness: 0.7,
+    transparent: true,
+    alphaTest: 0.35,
+    side: THREE.DoubleSide,
+  });
+  loadPhoto("fence_chainlink.jpg", { repeat: [6, 4], srgb: false }).then((texture) => {
+    if (!texture) return;
+    linkMaterial.alphaMap = texture;
+    linkMaterial.needsUpdate = true;
+  });
 
   for (const [side, z] of [
     [-1, 96],
@@ -349,6 +366,10 @@ function addAlleyFences(world) {
     [1, -76],
   ]) {
     const group = new THREE.Group();
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2.24, 2.2), linkMaterial);
+    mesh.rotation.y = Math.PI / 2;
+    mesh.position.set(side * 10.63, 1.1, z);
+    group.add(mesh);
     for (let i = -3; i <= 3; i += 1) {
       const bar = new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.2, 0.04), gateMaterial);
       bar.position.set(side * 10.63, 1.1, z + i * 0.32);

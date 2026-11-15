@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { clamp, damp, rand, dampAngle, choice } from "./utils.js";
+import { loadPhoto, swapMap } from "./world/photo.js";
 
 // CC0 animated allies (Quaternius Ultimate Animated Character Pack,
 // mirrored via Cinevva CDN; see README credits). Loaded async; bots fall
@@ -73,6 +74,11 @@ function createBotModel(shared, config) {
   const boot = shared.boots;
   const accent = new THREE.MeshStandardMaterial({ color: config.accent, roughness: 0.86 });
   const gunMetal = new THREE.MeshStandardMaterial({ color: 0x232728, roughness: 0.42, metalness: 0.74 });
+
+  // Photo texture on jacket and pants only; existing colors stay as tints.
+  const fabricPhoto = loadPhoto("fabric_tactical.jpg", { repeat: [1, 1] });
+  swapMap(jacket, fabricPhoto);
+  swapMap(pants, fabricPhoto);
 
   const torso = new THREE.Mesh(shared.torsoGeometry, jacket);
   torso.position.y = 1.22;

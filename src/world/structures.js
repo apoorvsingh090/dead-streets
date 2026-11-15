@@ -1,6 +1,15 @@
 import * as THREE from "three";
 import { rand, choice } from "../utils.js";
 import { makeSignTexture } from "./textures.js";
+import { loadPhoto, swapMap } from "./photo.js";
+
+// Shared concrete photo material for the large flat safehouse walls.
+// Neutral tint so the photo shows through.
+const concreteWallMaterial = new THREE.MeshStandardMaterial({
+  color: 0xffffff,
+  roughness: 0.92,
+});
+swapMap(concreteWallMaterial, loadPhoto("concrete_wall.jpg", { repeat: [2, 1] }), 0xffffff);
 
 export function buildGates(world) {
   world.gates.push(createGate(world, 53, "CEDA CHECKPOINT", 1));
@@ -94,12 +103,8 @@ export function buildSafehouses(world) {
 
 function buildStartSafehouse(world) {
   const group = new THREE.Group();
-  const wallMaterial = new THREE.MeshStandardMaterial({
-    color: 0x383b39,
-    roughness: 0.94,
-  });
 
-  const wall = new THREE.Mesh(new THREE.BoxGeometry(21.6, 8.5, 1.2), wallMaterial);
+  const wall = new THREE.Mesh(new THREE.BoxGeometry(21.6, 8.5, 1.2), concreteWallMaterial);
   wall.position.set(0, 4.25, 107.5);
   group.add(wall);
 
@@ -139,13 +144,8 @@ function buildStartSafehouse(world) {
 
 function buildEndSafehouse(world) {
   const group = new THREE.Group();
-  const concrete = new THREE.MeshStandardMaterial({
-    color: 0x323637,
-    roughness: 0.9,
-    metalness: 0.08,
-  });
 
-  const back = new THREE.Mesh(new THREE.BoxGeometry(21.6, 10.5, 1.4), concrete);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(21.6, 10.5, 1.4), concreteWallMaterial);
   back.position.set(0, 5.25, -106.05);
   group.add(back);
 

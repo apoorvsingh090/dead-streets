@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { rand, clamp, damp, choice, createCanvasTexture } from "./utils.js";
 import { ZOMBIE_TYPES, Zombie } from "./zombie.js";
+import { loadPhoto, swapMap } from "./world/photo.js";
 import { RAGDOLL_BODIES, RAGDOLL_GIBS, RAGDOLL_LIFE, stepRagdollBody, stepRagdollChunk } from "./ragdoll.js";
 
 export const MAX_ACID_POOLS = 8;
@@ -44,6 +45,16 @@ function buildSharedAssets() {
     new THREE.MeshStandardMaterial({ color: 0x352b22, roughness: 1 }),
     new THREE.MeshStandardMaterial({ color: 0x4a4640, roughness: 1 }),
   ];
+
+  // Photo textures swapped in after creation; existing colors stay as tints.
+  const fleshPhoto = loadPhoto("flesh_rotten.jpg", { repeat: [1, 1] });
+  const clothPhoto = loadPhoto("cloth_dirty.jpg", { repeat: [1, 1] });
+  for (const material of [...skin, ...runnerSkin, spitterSkin, bruteSkin]) {
+    swapMap(material, fleshPhoto);
+  }
+  for (const material of [...shirts, ...pants]) {
+    swapMap(material, clothPhoto);
+  }
 
   const stainTexture = createCanvasTexture(128, 128, (context, width, height) => {
     context.clearRect(0, 0, width, height);

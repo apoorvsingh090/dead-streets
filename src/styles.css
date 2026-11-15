@@ -724,10 +724,17 @@ kbd {
   height: 27px;
   flex: 0 0 27px;
   background: var(--squad-color, #6d7770);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   color: rgba(9, 11, 12, 0.85);
   font-family: var(--display);
   font-size: 14px;
   clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%);
+}
+
+.squad-avatar.has-portrait {
+  color: transparent;
 }
 
 .squad-avatar::after {
@@ -739,8 +746,13 @@ kbd {
 }
 
 .squad-row.is-downed .squad-avatar {
-  background: var(--red-deep);
+  background-color: var(--red-deep);
   color: var(--paper);
+}
+
+.squad-row.is-downed .squad-avatar.has-portrait {
+  color: transparent;
+  filter: saturate(0.4) brightness(0.75);
 }
 
 .squad-info {

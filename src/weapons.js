@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clamp, lerp, damp, rand, smoothstep, createCanvasTexture } from "./utils.js";
+import { loadPhoto, swapMap } from "./world/photo.js";
 
 export const WEAPONS = {
   rifle: {
@@ -95,7 +96,7 @@ function createMuzzleFlashTexture() {
 }
 
 function buildMaterials() {
-  return {
+  const materials = {
     gunmetal: new THREE.MeshStandardMaterial({
       color: 0x565b5d,
       roughness: 0.38,
@@ -142,6 +143,9 @@ function buildMaterials() {
       roughness: 0.96,
     }),
   };
+  // Photo texture on gunmetal only; existing color stays as tint.
+  swapMap(materials.gunmetal, loadPhoto("weapon_metal.jpg", { repeat: [1, 1] }));
+  return materials;
 }
 
 function box(width, height, depth, material, x = 0, y = 0, z = 0) {

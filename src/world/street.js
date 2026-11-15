@@ -144,6 +144,48 @@ export function buildStreet(world) {
     scene.add(trash);
     world.registerStatic(trash, "concrete");
   }
+
+  // Scattered tire skid marks; dark backing melts into the asphalt.
+  const tireMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.95,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+  });
+  loadPhoto("tire_marks.jpg", { repeat: [1, 1] }).then((texture) => {
+    if (!texture) return;
+    tireMaterial.map = texture;
+    tireMaterial.needsUpdate = true;
+  });
+  for (let i = 0; i < 10; i += 1) {
+    const tire = new THREE.Mesh(new THREE.PlaneGeometry(rand(1.6, 3.6), rand(0.8, 1.6)), tireMaterial);
+    tire.rotation.x = -Math.PI / 2;
+    tire.rotation.z = rand(0, Math.PI * 2);
+    tire.position.set(rand(-7.5, 7.5), 0.03, rand(-100, 104));
+    scene.add(tire);
+    world.registerStatic(tire, "concrete");
+  }
+
+  // Scattered oil stains; dark with iridescent color, plain map.
+  const oilMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.95,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+  });
+  loadPhoto("oil_stains.jpg", { repeat: [1, 1] }).then((texture) => {
+    if (!texture) return;
+    oilMaterial.map = texture;
+    oilMaterial.needsUpdate = true;
+  });
+  for (let i = 0; i < 8; i += 1) {
+    const oil = new THREE.Mesh(new THREE.PlaneGeometry(rand(0.8, 2.2), rand(0.8, 2.2)), oilMaterial);
+    oil.rotation.x = -Math.PI / 2;
+    oil.rotation.z = rand(0, Math.PI * 2);
+    oil.position.set(rand(-7.5, 7.5), 0.031, rand(-100, 104));
+    scene.add(oil);
+    world.registerStatic(oil, "concrete");
+  }
 }
 
 export function buildBuildings(world) {  for (const side of [-1, 1]) {
