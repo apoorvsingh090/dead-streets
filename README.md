@@ -1,5 +1,7 @@
 # DEAD STREETS
 
+[![CI](https://github.com/apoorvsingh090/dead-streets/actions/workflows/ci.yml/badge.svg)](https://github.com/apoorvsingh090/dead-streets/actions)
+
 A Left 4 Dead-inspired zombie survival FPS. Push through a rain-soaked city block with two AI survivors, survive CEDA barricade hordes, bring the evac generator online, and reach the shelter before the street overruns you.
 
 Runs in the browser, installs as a PWA, and ships as a Windows desktop app (Electron) for Steam.
