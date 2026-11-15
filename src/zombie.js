@@ -149,6 +149,26 @@ export class Zombie {
     }
   }
 
+  // If the GLB arrived after this zombie spawned (slow connection), swap the
+  // procedural body for the skinned one so early hordes do not stay boxy.
+  // Only alive zombies upgrade; corpses keep their procedural fall.
+  maybeUpgradeToSkinned() {
+    if (!this.isProceduralModel || this.dead || !zombieTemplate) return;
+    try {
+      this.manager.unregisterHitMeshes(this);
+      if (this.root.parent) this.manager.scene.remove(this.root);
+      this.hitMeshes = [];
+      this.headProxy = null;
+      this.buildSkinnedModel();
+      this.root.position.copy(this.position);
+      this.root.rotation.y = this.heading;
+      this.manager.scene.add(this.root);
+      this.manager.registerHitMeshes(this);
+    } catch (error) {
+      console.warn("Zombie skinned upgrade failed, keeping procedural:", error);
+    }
+  }
+
   buildSkinnedModel() {
     const shared = this.manager.shared;
     const isBrute = this.type === "brute";
@@ -481,6 +501,10 @@ export class Zombie {
     if (this.dead) {
       this.updateDeath(dt);
       return;
+    }
+
+    if (this.isProceduralModel && zombieTemplate) {
+      this.maybeUpgradeToSkinned();
     }
 
     this.attackCooldown = Math.max(0, this.attackCooldown - dt);
