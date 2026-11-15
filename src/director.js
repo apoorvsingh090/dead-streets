@@ -27,6 +27,15 @@ const WAVE_DEFS = {
   },
 };
 
+// Pure: Nightmare earns a second spitter in wave 2; other tiers unchanged.
+export function specialsFor(def, difficultyId) {
+  const specials = def.specials.map((special) => ({ ...special }));
+  if (difficultyId === "nightmare" && def.id === 2) {
+    specials.push({ at: 30, type: "spitter" });
+  }
+  return specials;
+}
+
 // Pure: shift the runner share of a wave table by difficulty.
 export function applyDifficultyMix(types, difficultyId) {
   const runnerBonus = difficultyId === "nightmare" ? 0.1 : difficultyId === "civilian" ? -0.05 : 0;
@@ -150,9 +159,11 @@ export class Director {
     if (!def) return;
     // Nightmare fields more runners; civilian leans on slow walkers.
     const types = applyDifficultyMix(def.types, this.game.difficulty?.id);
+    const specials = specialsFor(def, this.game.difficulty?.id);
     this.wave = {
       ...def,
       types,
+      specials,
       active: true,
       elapsed: 0,
       spawnClock: 0,
@@ -160,7 +171,7 @@ export class Director {
       spawnedSpecials: 0,
       specialIndex: 0,
       remaining: 0,
-      total: def.baseTotal + def.specials.length,
+      total: def.baseTotal + specials.length,
     };
 
     this.state = `wave${def.id}`;
