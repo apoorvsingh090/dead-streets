@@ -29,6 +29,7 @@ export function saveNumber(key, value) {
 }
 
 export const SENSITIVITY_KEY = "dead-streets:sensitivity";
+export const FOV_KEY = "dead-streets:fov";
 export const QUALITY_KEY = "dead-streets:quality";
 
 export function loadQuality() {

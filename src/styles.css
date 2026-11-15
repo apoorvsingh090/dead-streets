@@ -1781,6 +1781,7 @@ kbd {
 }
 
 .sensitivity-row,
+.fov-row,
 .volume-row {
   display: grid;
   grid-template-columns: 1fr 104px 38px;
@@ -1795,6 +1796,7 @@ kbd {
   letter-spacing: 0.14em;
 }
 
+.fov-row,
 .volume-row {
   margin-top: 12px;
   padding-top: 0;
@@ -1802,6 +1804,7 @@ kbd {
 }
 
 .sensitivity-row input,
+.fov-row input,
 .volume-row input {
   width: 100%;
   height: 2px;
@@ -1811,6 +1814,7 @@ kbd {
 }
 
 .sensitivity-row input::-webkit-slider-thumb,
+.fov-row input::-webkit-slider-thumb,
 .volume-row input::-webkit-slider-thumb {
   width: 9px;
   height: 15px;
@@ -1820,6 +1824,7 @@ kbd {
 }
 
 .sensitivity-row output,
+.fov-row output,
 .volume-row output {
   color: rgba(232, 226, 213, 0.62);
   font-family: var(--type);

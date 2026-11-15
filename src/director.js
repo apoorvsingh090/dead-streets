@@ -27,6 +27,16 @@ const WAVE_DEFS = {
   },
 };
 
+// Pure: shift the runner share of a wave table by difficulty.
+export function applyDifficultyMix(types, difficultyId) {
+  const runnerBonus = difficultyId === "nightmare" ? 0.1 : difficultyId === "civilian" ? -0.05 : 0;
+  return types.map(([type, weight]) => {
+    if (type === "runner") return [type, clamp(weight + runnerBonus, 0.05, 0.6)];
+    if (type === "walker") return [type, Math.max(0.3, weight - runnerBonus)];
+    return [type, weight];
+  });
+}
+
 export class Director {
   constructor(game) {
     this.game = game;
@@ -138,8 +148,11 @@ export class Director {
   startWave(key) {
     const def = WAVE_DEFS[key];
     if (!def) return;
+    // Nightmare fields more runners; civilian leans on slow walkers.
+    const types = applyDifficultyMix(def.types, this.game.difficulty?.id);
     this.wave = {
       ...def,
+      types,
       active: true,
       elapsed: 0,
       spawnClock: 0,

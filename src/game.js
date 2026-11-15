@@ -16,6 +16,7 @@ import {
   storeDifficulty,
 } from "./difficulty.js";
 import {
+  FOV_KEY,
   SENSITIVITY_KEY,
   considerBest,
   formatBestLine,
@@ -77,6 +78,8 @@ export class Game {
       menuButton: document.getElementById("menu-button"),
       sensitivity: document.getElementById("sensitivity"),
       sensitivityOutput: document.getElementById("sensitivity-output"),
+      fov: document.getElementById("fov"),
+      fovOutput: document.getElementById("fov-output"),
       volume: document.getElementById("volume"),
       volumeOutput: document.getElementById("volume-output"),
       qualityButton: document.getElementById("quality-button"),
@@ -245,6 +248,24 @@ export class Game {
         saveNumber(SENSITIVITY_KEY, value);
         if (this.dom.sensitivityOutput) {
           this.dom.sensitivityOutput.textContent = value.toFixed(2);
+        }
+      });
+    }
+
+    const fov = this.dom.fov;
+    if (fov) {
+      const storedFov = loadNumber(FOV_KEY, 76, 60, 90);
+      fov.value = String(storedFov);
+      this.player.setBaseFov(storedFov);
+      if (this.dom.fovOutput) {
+        this.dom.fovOutput.textContent = String(Math.round(storedFov));
+      }
+      fov.addEventListener("input", () => {
+        const value = parseFloat(fov.value);
+        this.player.setBaseFov(value);
+        saveNumber(FOV_KEY, value);
+        if (this.dom.fovOutput) {
+          this.dom.fovOutput.textContent = String(Math.round(value));
         }
       });
     }

@@ -98,6 +98,10 @@ export class Player {
     this.sensitivity = value;
   }
 
+  setBaseFov(value) {
+    this.baseFov = clamp(value, 60, 90);
+  }
+
   look(dx, dy) {
     const adsMultiplier = lerp(1, 0.7, this.adsProgress);
     const sensitivity = 0.00185 * this.sensitivity * adsMultiplier;
