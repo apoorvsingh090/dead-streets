@@ -20,6 +20,8 @@ export function buildFurniture(world) {
   addDumpster(world, 8.15, 72, 0.03);
   addDumpster(world, -8.2, 31, -0.04);
   addDumpster(world, 8.1, -47, 0.06);
+  addTrashCans(world);
+  addNewsboxes(world);
 
   addTrafficLight(world, 7.8, 18.4);
   addPowerPoles(world);
@@ -251,6 +253,87 @@ function addDumpster(world, x, z, rotation) {
   world.scene.add(dumpster);
   world.registerGroup(dumpster, "metal");
   world.addCollider(x - 1.05, x + 1.05, z - 1.35, z + 1.35, 1.6, true);
+}
+
+function addTrashCans(world) {
+  const bodyMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.5,
+    metalness: 0.65,
+  });
+  swapMap(bodyMaterial, loadPhoto("trashcan_metal.jpg", { repeat: [3, 1] }));
+  const lidMaterial = new THREE.MeshStandardMaterial({
+    color: 0x2b2e2e,
+    roughness: 0.55,
+    metalness: 0.6,
+  });
+  const bodyGeometry = new THREE.CylinderGeometry(0.32, 0.32, 0.85, 16);
+  const lidGeometry = new THREE.CylinderGeometry(0.36, 0.36, 0.12, 16);
+
+  const canSpots = [
+    [8.6, 78, false],
+    [-9.2, 54, false],
+    [9.8, 33, true],
+    [-8.4, 12, false],
+    [10.2, -8, false],
+    [-9.6, -27, true],
+    [8.8, -44, false],
+    [-10.1, -63, false],
+    [9.4, -81, true],
+    [-8.7, -92, false],
+  ];
+
+  for (const [x, z, tipped] of canSpots) {
+    const can = new THREE.Group();
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.position.y = 0.425;
+    can.add(body);
+    const lid = new THREE.Mesh(lidGeometry, lidMaterial);
+    lid.position.y = 0.91;
+    can.add(lid);
+    can.position.set(x, tipped ? 0.32 : 0, z);
+    if (tipped) can.rotation.z = Math.PI / 2;
+    else can.rotation.y = rand(0, Math.PI * 2);
+    world.scene.add(can);
+    world.registerGroup(can, "metal");
+  }
+}
+
+function addNewsboxes(world) {
+  const bodyMaterial = new THREE.MeshStandardMaterial({
+    color: 0x1f3a2a,
+    roughness: 0.55,
+    metalness: 0.45,
+  });
+  const frontMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.35,
+    metalness: 0.1,
+  });
+  swapMap(frontMaterial, loadPhoto("newsbox_front.jpg", { repeat: [1, 1] }));
+  const bodyGeometry = new THREE.BoxGeometry(0.45, 1.1, 0.55);
+  const frontGeometry = new THREE.PlaneGeometry(0.5, 0.8);
+
+  const boxSpots = [
+    [9.1, 44, 1],
+    [-8.8, 21, -1],
+    [8.6, -14, 1],
+    [-9.4, -52, -1],
+  ];
+
+  for (const [x, z, side] of boxSpots) {
+    const box = new THREE.Group();
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.position.y = 0.55;
+    box.add(body);
+    const front = new THREE.Mesh(frontGeometry, frontMaterial);
+    front.position.set(-side * 0.227, 0.6, 0);
+    front.rotation.y = side === 1 ? -Math.PI / 2 : Math.PI / 2;
+    box.add(front);
+    box.position.set(x, 0, z);
+    world.scene.add(box);
+    world.registerGroup(box, "metal");
+  }
 }
 
 function addTrafficLight(world, x, z) {

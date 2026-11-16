@@ -186,6 +186,95 @@ export function buildStreet(world) {
     scene.add(oil);
     world.registerStatic(oil, "concrete");
   }
+
+  // Storm drain grates near the curbs; dark backing melts into the asphalt.
+  const drainMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.95,
+    transparent: true,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+  });
+  loadPhoto("drain_grate.jpg", { repeat: [1, 1] }).then((texture) => {
+    if (!texture) return;
+    drainMaterial.map = texture;
+    drainMaterial.needsUpdate = true;
+  });
+  for (let i = 0; i < 6; i += 1) {
+    const side = i % 2 === 0 ? -1 : 1;
+    const x = side * rand(7.5, 8.5);
+    const drain = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.7), drainMaterial);
+    drain.rotation.x = -Math.PI / 2;
+    drain.rotation.z = rand(0, Math.PI * 2);
+    // Sidewalk top sits at y=0.12; keep grates on the road/asphalt below it.
+    drain.position.set(x, Math.abs(x) < 7.7 ? 0.032 : 0.125, rand(-95, 95));
+    scene.add(drain);
+    world.registerStatic(drain, "concrete");
+  }
+  // Two more on the outer edge of the sidewalk, by the building line.
+  for (const side of [-1, 1]) {
+    const drain = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.7), drainMaterial);
+    drain.rotation.x = -Math.PI / 2;
+    drain.rotation.z = rand(0, Math.PI * 2);
+    drain.position.set(side * rand(10.1, 10.5), 0.125, rand(-95, 95));
+    scene.add(drain);
+    world.registerStatic(drain, "concrete");
+  }
+
+  // Blood trails near the barricades (z=53 CEDA CHECKPOINT, z=-4 MARKET
+  // BARRICADE) and by the start safehouse entrance; dark backing melts in.
+  const bloodMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.95,
+    transparent: true,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+  });
+  loadPhoto("blood_trail.jpg", { repeat: [1, 1] }).then((texture) => {
+    if (!texture) return;
+    bloodMaterial.map = texture;
+    bloodMaterial.needsUpdate = true;
+  });
+  for (const barricadeZ of [53, -4]) {
+    for (let i = 0; i < 3; i += 1) {
+      const blood = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), bloodMaterial);
+      blood.rotation.x = -Math.PI / 2;
+      blood.rotation.z = rand(0, Math.PI * 2);
+      blood.position.set(rand(-6, 6), 0.033, barricadeZ + rand(-6, 6));
+      scene.add(blood);
+      world.registerStatic(blood, "concrete");
+    }
+  }
+  for (let i = 0; i < 2; i += 1) {
+    const blood = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), bloodMaterial);
+    blood.rotation.x = -Math.PI / 2;
+    blood.rotation.z = rand(0, Math.PI * 2);
+    blood.position.set(rand(-3, 3), 0.033, rand(96, 103));
+    scene.add(blood);
+    world.registerStatic(blood, "concrete");
+  }
+
+  // Tar repair strips scattered on the road; dark backing melts into asphalt.
+  const patchMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.95,
+    transparent: true,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+  });
+  loadPhoto("road_patch.jpg", { repeat: [1, 1] }).then((texture) => {
+    if (!texture) return;
+    patchMaterial.map = texture;
+    patchMaterial.needsUpdate = true;
+  });
+  for (let i = 0; i < 8; i += 1) {
+    const patch = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), patchMaterial);
+    patch.rotation.x = -Math.PI / 2;
+    patch.rotation.z = rand(0, Math.PI * 2);
+    patch.position.set(rand(-6, 6), 0.034, rand(-95, 95));
+    scene.add(patch);
+    world.registerStatic(patch, "concrete");
+  }
 }
 
 export function buildBuildings(world) {  for (const side of [-1, 1]) {

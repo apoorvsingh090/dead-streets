@@ -11,9 +11,20 @@ const concreteWallMaterial = new THREE.MeshStandardMaterial({
 });
 swapMap(concreteWallMaterial, loadPhoto("concrete_wall.jpg", { repeat: [2, 1] }), 0xffffff);
 
+// Shared canvas material for the CEDA checkpoint tents.
+const tentMaterial = new THREE.MeshStandardMaterial({
+  color: 0xffffff,
+  roughness: 0.9,
+  side: THREE.DoubleSide,
+});
+swapMap(tentMaterial, loadPhoto("tent_canvas.jpg", { repeat: [2, 2] }));
+
 export function buildGates(world) {
   world.gates.push(createGate(world, 53, "CEDA CHECKPOINT", 1));
   world.gates.push(createGate(world, -4, "MARKET BARRICADE", 2));
+  applyFinaleBarrierPhoto(world);
+  addShopInteriors(world);
+  buildCedaTents(world);
 }
 
 function createGate(world, z, label, index) {
@@ -614,6 +625,103 @@ export function buildBackground(world) {
   farGlow.scale.set(90, 40, 1);
   farGlow.position.set(-10, 16, -140);
   world.scene.add(farGlow);
+}
+
+// The finale barrier material is created inside furniture.js (addFinaleCover),
+// which this file does not own. buildFurniture runs before buildGates, so the
+// shared material can be found by its gray tint and swapped here. Both barrier
+// boxes share one material instance, so a single swapMap covers them.
+function applyFinaleBarrierPhoto(world) {
+  const seen = new Set();
+  world.scene.traverse((child) => {
+    if (!child.isMesh) return;
+    const material = child.material;
+    if (!material || !material.color) return;
+    if (material.color.getHex() !== 0x4e4e48) return;
+    if (seen.has(material)) return;
+    seen.add(material);
+    swapMap(material, loadPhoto("concrete_barrier.jpg", { repeat: [2, 1] }), 0x4e4e48);
+  });
+}
+
+// The storefront glass panels are created inside street.js (addStorefront),
+// which this file does not own. They are the only PlaneGeometry meshes with a
+// 2.35 height, transparent opacity 0.24 and surface "glass", so they can be
+// matched reliably. One dim interior plane is added ~0.3m behind each panel
+// (up to 3); the glass itself is left untouched.
+function addShopInteriors(world) {
+  const panels = [];
+  world.scene.traverse((child) => {
+    if (!child.isMesh) return;
+    if (child.geometry?.type !== "PlaneGeometry") return;
+    if (child.geometry.parameters?.height !== 2.35) return;
+    if (!child.material?.transparent || child.material?.opacity !== 0.24) return;
+    if (child.userData.surface !== "glass") return;
+    panels.push(child);
+  });
+
+  for (const glass of panels.slice(0, 3)) {
+    const width = glass.geometry.parameters.width;
+    const side = Math.sign(glass.position.x) || 1;
+    const interiorMaterial = new THREE.MeshBasicMaterial({
+      color: 0x8a9094,
+      side: THREE.DoubleSide,
+    });
+    swapMap(interiorMaterial, loadPhoto("shop_interior.jpg"), 0x8a9094);
+    const interior = new THREE.Mesh(new THREE.PlaneGeometry(width, 2.35), interiorMaterial);
+    interior.position.set(glass.position.x + side * 0.3, glass.position.y, glass.position.z);
+    interior.rotation.y = glass.rotation.y;
+    world.scene.add(interior);
+    world.registerStatic(interior, "glass");
+  }
+}
+
+// Two ridge tents pitched near the CEDA checkpoint gate (z ~ 53), clear of the
+// drive path (|x| > 4) and of the gate collider (z 52.68-53.32).
+function buildCedaTents(world) {
+  createTent(world, 6.4, 49.6, 0.35);
+  createTent(world, -6.4, 56.6, -0.3);
+}
+
+function createTent(world, x, z, rotationY) {
+  const group = new THREE.Group();
+  group.position.set(x, 0, z);
+  group.rotation.y = rotationY;
+
+  const width = 3;
+  const height = 2.2;
+  const length = 2.6;
+  const half = width / 2;
+  const slope = Math.hypot(half, height);
+  const tilt = Math.atan2(height, half);
+
+  const panelGeometry = new THREE.PlaneGeometry(slope, length);
+  panelGeometry.rotateX(-Math.PI / 2);
+
+  const leftPanel = new THREE.Mesh(panelGeometry, tentMaterial);
+  leftPanel.position.set(-half / 2, height / 2, 0);
+  leftPanel.rotation.z = tilt;
+  group.add(leftPanel);
+
+  const rightPanel = new THREE.Mesh(panelGeometry, tentMaterial);
+  rightPanel.position.set(half / 2, height / 2, 0);
+  rightPanel.rotation.z = -tilt;
+  group.add(rightPanel);
+
+  const triangle = new THREE.Shape();
+  triangle.moveTo(-half, 0);
+  triangle.lineTo(half, 0);
+  triangle.lineTo(0, height);
+  triangle.closePath();
+  const endGeometry = new THREE.ShapeGeometry(triangle);
+  for (const end of [-1, 1]) {
+    const cap = new THREE.Mesh(endGeometry, tentMaterial);
+    cap.position.set(0, 0, end * (length / 2));
+    group.add(cap);
+  }
+
+  world.scene.add(group);
+  world.registerGroup(group, "fabric");
 }
 
 export function buildAtmosphere(world) {

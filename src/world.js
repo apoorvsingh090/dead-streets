@@ -9,6 +9,7 @@ import {
   makeSignTexture,
 } from "./world/textures.js";
 import { buildStreet, buildBuildings, buildSkyline, buildSky } from "./world/street.js";
+import { buildSkylineDressing } from "./world/rooftops.js";
 import { loadPhoto, swapMap } from "./world/photo.js";
 import { buildFurniture } from "./world/furniture.js";
 import {
@@ -52,6 +53,7 @@ export class World {
 
     buildStreet(this);
     buildBuildings(this);
+    buildSkylineDressing(this);
     buildSkyline(this);
     buildSky(this);
     buildFurniture(this);
